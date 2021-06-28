@@ -7,7 +7,7 @@
 ```
 Anachro Mouse, a usb to serial mouse adaptor.
 
-This program will convert USB mouse inputs to serial (Microsoft) mouse protocol for retro hardware. This way you can use an existing modern PC/laptop or perhaps even a Raspberry Pi to mouse on your retro system.
+This software will convert USB mouse inputs to serial (Microsoft) mouse protocol for retro hardware. This way you can use an existing modern PC/laptop or perhaps even a Raspberry Pi to mouse on your retro system.
 
 If you feel a bit more adventurous and would like to build a stand-alone adaptor device, I have also designed a board and written code to do this using a Raspberry Pico microcontroller (To be published).
 
@@ -18,6 +18,8 @@ The adaptor has been tested to work against DOS and Windows 95 serial mouse driv
 A version usable under Linux can be found under the 'linux' subdirectory.
 
 I wrote this as a prototype before moving on to writing a Raspberry Pico implementation of the same.
+
+The mouse is by default captured in exclusive mode so you can use it without worrying about sending inputs to the system running it. Non-exclusive mode is also supported.
 
 ## Requirements
 - A working C building environment.

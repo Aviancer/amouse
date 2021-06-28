@@ -48,7 +48,7 @@ void showhelp(char *argv[]) {
 	 "  -w Disable mousewheel, switch to basic MS protocol\n" \
 	 "  -e Disable exclusive access to mouse\n" \
 	 "  -i Immediate ident mode, disables waiting for CTS pin\n" \
-	 "  -d Print out debug information of mouse state\n", V_MAJOR, V_MINOR, V_REVISION, argv[0]);
+	 "  -d Print out debug information on mouse state\n", V_MAJOR, V_MINOR, V_REVISION, argv[0]);
 }
 
 // Struct for storing pointers to dynamically allocated memory containing options.
