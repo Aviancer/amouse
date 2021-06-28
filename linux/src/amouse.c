@@ -61,6 +61,15 @@ struct opts {
   int debug;
 };
 
+// Struct for storing information about accumulated mouse state
+typedef struct mouse_state {
+  int pc_state; // Current state of mouse driver initialization on PC.
+  uint8_t state[4]; // Mouse state
+  int x, y, wheel;
+  int update; // How many bytes to send
+  int lmb, rmb, mmb, force_update;
+} mouse_state_t;
+
 void parse_opts(int argc, char **argv, struct opts *options) {
   int option_index = 0;
   int quit = 0;
@@ -77,6 +86,7 @@ void parse_opts(int argc, char **argv, struct opts *options) {
       case 's':
         options->serialpath = strndup(optarg, 4096);
         break;
+
       case 'h':
         showhelp(argv); exit(0);
         break;
@@ -142,11 +152,15 @@ static int open_usbinput(const char* device, int exclusive) {
 	return -1;
 }
 
+
+/*** Flow control functions ***/
+
 // Make sure we don't clobber higher update requests with lower ones.
-int push_update(int state_mmb) {
-  if(state_mmb) { return 3; }
-  return 2;
+void push_update(mouse_state_t *mouse, int full_packet) {
+  if(full_packet || (mouse->update == 3)) { mouse->update = 3; }
+  else { mouse->update = 2; }
 }
+
 
 /*** Main init & loop ***/
 
@@ -204,19 +218,14 @@ int main(int argc, char **argv) {
 
   fcntl (0, F_SETFL, O_NONBLOCK); // Nonblock 0=stdin
   
-  uint8_t init_mouse_state[] = "\x40\x00\x00\x00"; // Our basic mouse packet (We send 3 or 4 bytes of it)
-  uint8_t mouse_state[4];
-  memcpy( mouse_state, init_mouse_state, sizeof(mouse_state) ); // Set packet memory to initial state
-
-  int movement;
-
-  int update; // How many bytes to send
-  int i; // Allocate outside main loop instead of allocating every time.
-
   // Aggregate movements before sending
   struct timespec time_now, time_target, time_diff;
-  int x, y, wheel = 0;
-  int state_lmb, state_rmb, state_mmb, force_update = 0;
+  uint8_t init_mouse_state[] = "\x40\x00\x00\x00"; // Our basic mouse packet (We send 3 or 4 bytes of it)
+  mouse_state_t mouse;
+  memcpy( mouse.state, init_mouse_state, sizeof(mouse.state) ); // Set packet memory to initial state
+
+  int movement;
+  int i; // Allocate outside main loop instead of allocating every time.
 
   time_target = get_target_time(SERIALDELAY_3B);
   
@@ -226,11 +235,11 @@ int main(int argc, char **argv) {
   // Ident immediately on program start up.
   if(options->immediate) {
     aprint("Performing immediate identification as mouse.");
-    mouse_ident(fd, options->wheel);
+    mouse_ident(fd, options->wheel, options->immediate);
   }
 
   while(1) {
-    update = -1;
+    mouse.update = -1;
 
     /* Check if mouse driver trying to initialize */
     /* TODO: This will also trigger if the PC is not powered */
@@ -239,7 +248,7 @@ int main(int argc, char **argv) {
 	aprint("Computers RTS & DTR pins set low, identifying as mouse.");
       }
 
-      mouse_ident(fd, options->wheel);
+      mouse_ident(fd, options->wheel, options->immediate);
       aprint("Mouse initialized. Good to go!");
 
       /* Negotiate 2400 baud rate 
@@ -260,20 +269,20 @@ int main(int argc, char **argv) {
       if(ev.type == EV_KEY) {
 	switch(ev.code) {
 	  case BTN_LEFT:
-	    state_lmb = ev.value;
-	    force_update = 1;
-	    update = push_update(state_mmb);
+	    mouse.lmb = ev.value;
+	    mouse.force_update = 1;
+	    push_update(&mouse, mouse.mmb);
 	    break;
 	  case BTN_RIGHT:
-	    state_rmb = ev.value;
-	    force_update = 1;
-	    update = push_update(state_mmb);
+	    mouse.rmb = ev.value;
+	    mouse.force_update = 1;
+	    push_update(&mouse, mouse.mmb);
 	    break;
 	  case BTN_MIDDLE:
 	    if(options->wheel) {
-  	      state_mmb = ev.value;
-	      force_update = 1;
-	      update = push_update(1); // Every time MMB changes (on or off), must send 4 bytes.
+  	      mouse.mmb = ev.value;
+	      mouse.force_update = 1;
+	      push_update(&mouse, 1); // Every time MMB changes (on or off), must send 4 bytes.
 	    }
 	    break;
         }
@@ -283,65 +292,65 @@ int main(int argc, char **argv) {
       else if (ev.type == EV_REL) {
 	switch(ev.code) {
 	  case REL_X:
-	    x += ev.value;
-            x = clamp(x, -127, 127);
+	    mouse.x += ev.value;
+            mouse.x = clamp(mouse.x, -127, 127);
 	    break;
           case REL_Y:
- 	    y += ev.value;
-            y = clamp(y, -127, 127);
+ 	    mouse.y += ev.value;
+            mouse.y = clamp(mouse.y, -127, 127);
 	    break;
 	  case REL_WHEEL:
 	    if(options->wheel) {
-	      wheel += ev.value;
-              wheel = clamp(wheel, -15, 15);
-	      update = push_update(2);
+	      mouse.wheel += ev.value;
+              mouse.wheel = clamp(mouse.wheel, -15, 15);
+	      push_update(&mouse, 1);
 	    }
 	    break;
 	}
-	update=push_update(state_mmb);
+	push_update(&mouse, mouse.mmb);
       }
 
       /*** Send mouse state updates clamped to baud max rate ***/ 
       clock_gettime(CLOCK_MONOTONIC, &time_now);
       timespec_diff(&time_target, &time_now, &time_diff);
 
-      if((time_diff.tv_sec < 0 && update > -1) || force_update) {
+      if((time_diff.tv_sec < 0 && mouse.update > -1) || mouse.force_update) {
 
         // Set mouse button states	
-	mouse_state[0] |= (state_lmb << MOUSE_LMB_BIT);
-	mouse_state[0] |= (state_rmb << MOUSE_RMB_BIT);
-	mouse_state[3] |= (state_mmb << MOUSE_MMB_BIT);
+	mouse.state[0] |= (mouse.lmb << MOUSE_LMB_BIT);
+	mouse.state[0] |= (mouse.rmb << MOUSE_RMB_BIT);
+	mouse.state[3] |= (mouse.mmb << MOUSE_MMB_BIT);
 
 	// Update aggregated mouse movement state
-        movement = x & 0xc0; // Get 2 upper bits of X movement
-	mouse_state[0] = mouse_state[0] | (movement >> 6); // Sets bit based on ev.value, 8th bit to 2nd bit (Discards bits)
-	mouse_state[1] = mouse_state[1] | (x & 0x3f); 
+        movement = mouse.x & 0xc0; // Get 2 upper bits of X movement
+	mouse.state[0] = mouse.state[0] | (movement >> 6); // Sets bit based on ev.value, 8th bit to 2nd bit (Discards bits)
+	mouse.state[1] = mouse.state[1] | (mouse.x & 0x3f); 
 
-        movement = y & 0xc0; // Get 2 upper bits of Y movement
-	mouse_state[0] = mouse_state[0] | (movement >> 4);
-	mouse_state[2] = mouse_state[2] | (y & 0x3f); 
+        movement = mouse.y & 0xc0; // Get 2 upper bits of Y movement
+	mouse.state[0] = mouse.state[0] | (movement >> 4);
+	mouse.state[2] = mouse.state[2] | (mouse.y & 0x3f); 
 
-	mouse_state[3] = mouse_state[3] | (-wheel & 0x0f); // 127(negatives) when scrolling up, 1(positives) when scrolling down.
-        
+	mouse.state[3] = mouse.state[3] | (-mouse.wheel & 0x0f); // 127(negatives) when scrolling up, 1(positives) when scrolling down.
+
 	// Send updates
-        for(i=0; i <= update; i++) {
+        for(i=0; i <= mouse.update; i++) {
           if(options->debug) {
 	    fprintf(stderr, "Time: %d.%d\n", (int)time_diff.tv_sec, (int)time_diff.tv_nsec);
-            fprintf(stderr, "Sent(ev:%d) %d: %x\n", ev.code, i, mouse_state[i]);
-	    fprintf(stderr, "Mouse state(%d): %s\n", i, byte_to_bitstring(mouse_state[i]));
+            fprintf(stderr, "Sent(ev:%d) %d: %x\n", ev.code, i, mouse.state[i]);
+	    fprintf(stderr, "Mouse state(%d): %s\n", i, byte_to_bitstring(mouse.state[i]));
 	  }
-          write(fd, &mouse_state[i], sizeof(uint8_t));
+          write(fd, &mouse.state[i], sizeof(uint8_t));
         }
 	if(options->debug) { printf("\n"); }
 
 	// Use variable send rate depending on whether middle mouse button pressed or not (3 or 4 byte updates)
-	if(state_mmb) { time_target = get_target_time(SERIALDELAY_4B); }
-	else { time_target = get_target_time(SERIALDELAY_3B); }
-        update = -1;
-	force_update = 0;
-	x = y = wheel = 0;
+	if(mouse.mmb) { time_target = get_target_time(SERIALDELAY_4B); }
+	else          { time_target = get_target_time(SERIALDELAY_3B); }
+        mouse.update = -1;
+	mouse.force_update = 0;
+	mouse.x = mouse.y = mouse.wheel = 0;
 
-        memcpy( mouse_state, init_mouse_state, sizeof(mouse_state) ); // Reset packet to initial state
+        memcpy( mouse.state, init_mouse_state, sizeof(mouse.state) ); // Reset packet to initial state
       }
  
       usleep(1);

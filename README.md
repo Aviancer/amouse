@@ -48,7 +48,7 @@ Where ttyUSB0 in this case is for example a USB serial port adapter, naturally y
 Note that evdev requires access to a -event- generating device, just picking any `/dev/input` mouse device will not work.
 
 You can try the following for finding the device file for your mouse:
-`ls /dev/input/by-id/\*event-mouse\*`
+`ls /dev/input/by-id/*event-mouse*`
 
 If you are unable to find your mouse under there, you may have to look try out the various `/dev/input/event*` files instead.
 The following may also provide some pointers for figuring out a `/dev/input/event*` number: `grep -H '' /sys/class/input/*/name`

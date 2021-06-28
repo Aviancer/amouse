@@ -105,11 +105,13 @@ void wait_pin_state(int fd, int flag, int desired_state) {
   }
 }
 
-void mouse_ident(int fd, int wheel_enabled) {
+void mouse_ident(int fd, int wheel_enabled, int immediate) {
   /*** Microsoft Mouse proto negotiation ***/
-  wait_pin_state(fd, TIOCM_CTS | TIOCM_DSR, 0); // Computers RTS & DTR
-  wait_pin_state(fd, TIOCM_CTS, 1); 
-  usleep(14); // Simulate real mouse start up.
+  if(!immediate) {
+    wait_pin_state(fd, TIOCM_CTS | TIOCM_DSR, 0); // Computers RTS & DTR
+    wait_pin_state(fd, TIOCM_CTS, 1); 
+    usleep(14); // Simulate real mouse start up.
+  }
   /* Byte1:Always M
    * Byte2:[None]=Microsoft 3=Logitech Z=MicrosoftWheel  */
   //uint8_t logitech[] = "\x4D\x33";
