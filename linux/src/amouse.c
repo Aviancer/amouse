@@ -122,34 +122,34 @@ void parse_opts(int argc, char **argv, struct opts *options) {
 /*** USB comms ***/
 
 static int open_usbinput(const char* device, int exclusive) {
-	int fd;
-        int returncode = 1;
-	struct libevdev* dev;
+  int fd;
+  int returncode = 1;
+  struct libevdev* dev;
 
-	fd = open(device, O_RDONLY | O_NONBLOCK);
-	if (fd < 0) { return -1; }
+  fd = open(device, O_RDONLY | O_NONBLOCK);
+  if (fd < 0) { return -1; }
 
-	/* Check if it's a mouse */
-	returncode = libevdev_new_from_fd(fd, &dev);
-	if (returncode < 0) {
-	  fprintf(stderr, "Error: %d %s\n", -returncode, strerror(-returncode));
-	  return -1;
-	}
-	returncode = libevdev_has_event_type(dev, EV_REL) &&
-                     libevdev_has_event_code(dev, EV_REL, REL_X) &&
-                     libevdev_has_event_code(dev, EV_REL, REL_Y) &&
-                     libevdev_has_event_code(dev, EV_KEY, BTN_LEFT) &&
-                     libevdev_has_event_code(dev, EV_KEY, BTN_MIDDLE) &&
-                     libevdev_has_event_code(dev, EV_KEY, BTN_RIGHT);
-	libevdev_free(dev);
+  /* Check if it's a mouse */
+  returncode = libevdev_new_from_fd(fd, &dev);
+  if (returncode < 0) {
+    fprintf(stderr, "Error: %d %s\n", -returncode, strerror(-returncode));
+    return -1;
+  }
+  returncode = libevdev_has_event_type(dev, EV_REL) &&
+               libevdev_has_event_code(dev, EV_REL, REL_X) &&
+               libevdev_has_event_code(dev, EV_REL, REL_Y) &&
+               libevdev_has_event_code(dev, EV_KEY, BTN_LEFT) &&
+               libevdev_has_event_code(dev, EV_KEY, BTN_MIDDLE) &&
+               libevdev_has_event_code(dev, EV_KEY, BTN_RIGHT);
+  libevdev_free(dev);
 
-	if (returncode) { 
-	  if(exclusive) { ioctl(fd, EVIOCGRAB, 1); } // Get exclusive mouse access
-	  return fd;
-	}
+  if (returncode) { 
+    if(exclusive) { ioctl(fd, EVIOCGRAB, 1); } // Get exclusive mouse access
+    return fd;
+  }
 
-	close(fd);
-	return -1;
+  close(fd);
+  return -1;
 }
 
 
@@ -211,9 +211,6 @@ int main(int argc, char **argv) {
  
   // Initialize serial parameters 
   setup_tty(fd, (speed_t)B1200);
- 
-  /*** Microsoft Mouse proto negotiation ***/
-  
   enable_pin(fd, TIOCM_RTS | TIOCM_DTR);
 
   fcntl (0, F_SETFL, O_NONBLOCK); // Nonblock 0=stdin
@@ -237,6 +234,9 @@ int main(int argc, char **argv) {
     aprint("Performing immediate identification as mouse.");
     mouse_ident(fd, options->wheel, options->immediate);
   }
+
+
+  /*** Main loop ***/
 
   while(1) {
     mouse.update = -1;
