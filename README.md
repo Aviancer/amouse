@@ -7,17 +7,17 @@
 ```
 Anachro Mouse, a usb to serial mouse adaptor.
 
-This software will convert USB mouse inputs to serial (Microsoft) mouse protocol for retro hardware. This way you can use an existing modern PC/laptop or perhaps even a Raspberry Pi to mouse on your retro system.
+This software will convert USB mouse inputs to serial (Microsoft) mouse protocol for retro hardware. This way you can use a Raspberry Pi or an existing modern PC/laptop to mouse on your retro system.
 
-If you feel a bit more adventurous and would like to build a stand-alone adaptor device, I have also designed a board and written code to do this using a Raspberry Pico microcontroller (To be published).
+If you feel a bit more adventurous and would like to build a stand-alone adaptor device, I have also designed a board and written code to do this using a Raspberry Pico microcontroller.
 
 The adaptor has been tested to work against DOS and Windows 95 serial mouse drivers so far.
 
 # Linux version
 
-A version usable under Linux can be found under the 'linux' subdirectory.
+Tested to work also on a Raspberry Pi.
 
-I wrote this as a prototype before moving on to writing a Raspberry Pico implementation of the same.
+The Linux version can be found under the 'linux' subdirectory. I wrote this as a prototype before moving on to writing a Raspberry Pico implementation of the same.
 
 The mouse is by default captured in exclusive mode so you can use it without worrying about sending inputs to the system running it. Non-exclusive mode is also supported.
 
@@ -61,7 +61,44 @@ If your serial cable/adaptor isn't fully pinned (missing a CTS pin), you may use
 
 # Raspberry Pico (RP2040) version
 
-I've also written a version capable of running stand-alone on the RP2040 and it will be added later.
+Provides a stand-alone adapter running on a Raspberry Pico microcontroller for converting from USB to Serial Mouse.
+
+Currently supports emulating a wheeled Microsoft Mouse, with all three buttons and wheel working.
+
+## Requirements
+- Basic soldering skills
+- A Raspberry Pico microcontroller
+- One DIP MAX3232 chip or compatible, with 1x TX + 2x RX pins available.
+- 4x 0.1uF capacitors (charge pumps for MAX3232, etc)
+- Serial header with RX, TX and CTS available
+- USB-A header to solder on, or alternatively a USB micro to USB-A host adaptor for connecting a USB mouse to the Pico USB port
+- Few bits of wire/board to make connections
+- A suitable serial cable for connecting from the adaptor to the computers serial port
+- Working C building environment
+- cmake version > 3.12
+- Raspberry Pico SDK (Should auto-pull from git on cmake)
+
+## Build & install
+```
+cd pico/build
+cmake ..
+make
+```
+
+This Will build `amouse.uf2` which can be flashed onto a Raspberry Pico.
+
+To enter flashing mode with Raspberry Pico by holding down the small white button while connecting it to a USB port. Then simply copy `amouse.uf2` onto the Pico USB drive.
+
+(To be done) See `diagrams` directory for how to wire the Pico correctly to talk to a serial port.
+
+## Usage example
+
+- Connect your USB mouse to the adaptor
+- Connect the adaptors serial port to the computers serial port
+- Provide the Pico with 5v power (and appropriate grounding, etc)
+- Run a mouse driver/start a serial mouse using OS on the computer
+
+Provided that everything is connected up correctly, the adaptor will auto-detect any mouse driver initialization from the PC and introduce itself as a Microsoft mouse. You can then use your USB mouse as a serial mouse.
 
 # FAQ
 
