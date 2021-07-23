@@ -32,4 +32,4 @@ pico_add_extra_outputs(amouse)
 # add url via pico_set_program_url
 pico_set_program_name(${TARGET} "amouse") 
 pico_set_program_description(${TARGET} "Anachro Mouse, a usb to serial mouse adaptor.")
-pico_set_program_url(${TARGET} "https://github.com/Aviancer/amouse/pico/tree/HEAD")
+pico_set_program_url(${TARGET} "https://github.com/Aviancer/amouse/tree/HEAD")
