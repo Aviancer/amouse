@@ -6,7 +6,7 @@ encoding utf-8
 Sheet 1 1
 Title "Anachro Mouse, USB to Serial Mouse Adapter"
 Date "2021-07-27"
-Rev "1"
+Rev "2"
 Comp "github.com/Aviancer/amouse"
 Comment1 "twitter.com/skyvian"
 Comment2 "Licensed under TAPR Open Hardware License v1.0 (www.tapr.org/OHL)"
@@ -38,10 +38,6 @@ $EndComp
 Wire Wire Line
 	1750 4000 1850 4000
 Connection ~ 1850 4000
-Text GLabel 2150 3600 2    50   BiDi ~ 0
-USB_D+
-Text GLabel 2150 3700 2    50   BiDi ~ 0
-USB_D-
 $Comp
 L power:GND #PWR?
 U 1 1 60DC3812
@@ -235,8 +231,8 @@ $Comp
 L Interface_UART:MAX3232 U2
 U 1 1 60DC4834
 P 7250 3800
-F 0 "U2" H 7250 5400 50  0000 C CNN
-F 1 "MAX3232" H 7250 5300 50  0000 C CNN
+F 0 "U2" H 7250 5600 50  0000 C CNN
+F 1 "MAX3232" H 7250 5500 50  0000 C CNN
 F 2 "" H 7300 2750 50  0001 L CNN
 F 3 "https://datasheets.maximintegrated.com/en/ds/MAX3222-MAX3241.pdf" H 7250 3900 50  0001 C CNN
 	1    7250 3800
@@ -246,7 +242,7 @@ Text Notes 8350 3600 0    50   ~ 0
 0.1 uF
 Text Notes 8350 3300 0    50   ~ 0
 0.1 uF
-Text Notes 8350 3000 0    50   ~ 0
+Text Notes 8350 3050 0    50   ~ 0
 0.1 uF
 Text Notes 6000 3050 0    50   ~ 0
 0.1 uF
@@ -283,10 +279,10 @@ Wire Wire Line
 Wire Wire Line
 	8050 2900 8150 2900
 $Comp
-L Device:CP_Small C1
+L Device:CP_Small C2
 U 1 1 60DCDCB9
 P 6350 3050
-F 0 "C1" H 6438 3096 50  0000 L CNN
+F 0 "C2" H 6438 3096 50  0000 L CNN
 F 1 "CP_Small" H 6438 3005 50  0000 L CNN
 F 2 "" H 6350 3050 50  0001 C CNN
 F 3 "~" H 6350 3050 50  0001 C CNN
@@ -294,10 +290,10 @@ F 3 "~" H 6350 3050 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Device:CP_Small C2
+L Device:CP_Small C3
 U 1 1 60DD17D0
 P 8150 3050
-F 0 "C2" H 8238 3096 50  0000 L CNN
+F 0 "C3" H 8238 3096 50  0000 L CNN
 F 1 "CP_Small" H 8238 3005 50  0000 L CNN
 F 2 "" H 8150 3050 50  0001 C CNN
 F 3 "~" H 8150 3050 50  0001 C CNN
@@ -314,10 +310,10 @@ RS232_RX
 Text GLabel 8050 3900 2    50   Output ~ 0
 RS232_TX
 $Comp
-L Device:CP_Small C4
+L Device:CP_Small C5
 U 1 1 60DD1E84
 P 8150 3700
-F 0 "C4" V 8200 3800 50  0000 C CNN
+F 0 "C5" V 8200 3800 50  0000 C CNN
 F 1 "CP_Small" V 8016 3700 50  0000 C CNN
 F 2 "" H 8150 3700 50  0001 C CNN
 F 3 "~" H 8150 3700 50  0001 C CNN
@@ -325,10 +321,10 @@ F 3 "~" H 8150 3700 50  0001 C CNN
 	0    1    1    0   
 $EndComp
 $Comp
-L Device:CP_Small C3
+L Device:CP_Small C4
 U 1 1 60DCF2E8
 P 8150 3400
-F 0 "C3" V 8200 3300 50  0000 C CNN
+F 0 "C4" V 8200 3300 50  0000 C CNN
 F 1 "CP_Small" V 8284 3400 50  0000 C CNN
 F 2 "" H 8150 3400 50  0001 C CNN
 F 3 "~" H 8150 3400 50  0001 C CNN
@@ -338,12 +334,12 @@ $EndComp
 $Comp
 L power:+5V #PWR?
 U 1 1 60DCBE28
-P 7250 2600
-F 0 "#PWR?" H 7250 2450 50  0001 C CNN
-F 1 "+5V" H 7265 2773 50  0000 C CNN
-F 2 "" H 7250 2600 50  0001 C CNN
-F 3 "" H 7250 2600 50  0001 C CNN
-	1    7250 2600
+P 7650 2200
+F 0 "#PWR?" H 7650 2050 50  0001 C CNN
+F 1 "+5V" H 7665 2373 50  0000 C CNN
+F 2 "" H 7650 2200 50  0001 C CNN
+F 3 "" H 7650 2200 50  0001 C CNN
+	1    7650 2200
 	1    0    0    -1  
 $EndComp
 $Comp
@@ -360,10 +356,9 @@ $EndComp
 Wire Wire Line
 	4900 3100 5200 3100
 Wire Wire Line
-	8250 3700 8250 3400
+	8350 3700 8350 3400
 Wire Wire Line
-	8250 3400 8650 3400
-Connection ~ 8250 3400
+	8250 3400 8350 3400
 Wire Wire Line
 	8650 3400 8650 3500
 Wire Wire Line
@@ -407,4 +402,52 @@ F 3 "" H 8850 3500 50  0001 C CNN
 $EndComp
 Wire Wire Line
 	8850 3500 9500 3500
+Connection ~ 8350 3400
+Wire Wire Line
+	8350 3400 8650 3400
+Wire Wire Line
+	8250 3700 8350 3700
+$Comp
+L power:GND #PWR?
+U 1 1 6103CC7F
+P 7450 2550
+F 0 "#PWR?" H 7450 2300 50  0001 C CNN
+F 1 "GND" H 7455 2377 50  0000 C CNN
+F 2 "" H 7450 2550 50  0001 C CNN
+F 3 "" H 7450 2550 50  0001 C CNN
+	1    7450 2550
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	7250 2600 7250 2200
+Wire Wire Line
+	7250 2200 7450 2200
+$Comp
+L Device:CP_Small C1
+U 1 1 6103B4CE
+P 7450 2450
+F 0 "C1" H 7538 2496 50  0000 L CNN
+F 1 "CP_Small" H 7538 2405 50  0000 L CNN
+F 2 "" H 7450 2450 50  0001 C CNN
+F 3 "~" H 7450 2450 50  0001 C CNN
+	1    7450 2450
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	7450 2350 7450 2200
+Connection ~ 7450 2200
+Wire Wire Line
+	7450 2200 7650 2200
+Text Notes 7650 2450 0    50   ~ 0
+0.1 uF
+Text GLabel 2150 3700 2    50   BiDi ~ 0
+USB_D-
+Text GLabel 2150 3600 2    50   BiDi ~ 0
+USB_D+
+Text Notes 4100 3150 0    50   ~ 0
+Pico
+Text Notes 7550 2600 0    50   ~ 0
+C
+Text Notes 7600 2600 0    26   ~ 0
+BYPASS\n
 $EndSCHEMATC

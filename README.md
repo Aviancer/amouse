@@ -74,7 +74,7 @@ Currently supports emulating a wheeled Microsoft Mouse, with all three buttons a
 ### Components
 - A Raspberry Pico microcontroller
 - One DIP MAX3232 chip or compatible, with 1x TX + 2x RX pins available.
-- 4x 0.1uF capacitors (charge pumps for MAX3232, etc)
+- 5x 0.1uF capacitors (charge pumps for MAX3232, cbypass, etc)
 - Serial header with RX, TX and CTS available
 - USB-A header to solder on, or alternatively a USB micro to USB-A host adaptor for connecting a USB mouse to the Pico USB port
 - Few bits of wire/board to make connections
