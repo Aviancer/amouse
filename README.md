@@ -9,7 +9,7 @@ Anachro Mouse, a usb to serial mouse adaptor.
 
 This software will convert USB mouse inputs to Microsoft serial mouse protocol for retro hardware. This way you can use a Raspberry Pico, a Raspberry Pi or an existing modern PC/laptop to mouse on your retro system.
 
-If you do feel a bit more adventurous and would like to build a stand-alone adaptor device, I have included the code to do this using a Raspberry Pico microcontroller. A circuit diagram will be included later.
+If you do feel a bit more adventurous and would like to build a stand-alone adaptor device, I have included the code to do this using a Raspberry Pico microcontroller. A circuit diagram is provided under the `diagrams` folder.
 
 The adaptor has been tested to work against DOS and Windows 95 serial mouse drivers so far.
 
@@ -67,6 +67,11 @@ Currently supports emulating a wheeled Microsoft Mouse, with all three buttons a
 
 ## Requirements
 - Basic soldering skills
+- Working C building environment
+- cmake version > 3.12
+- Raspberry Pico SDK (Should auto-pull from git on cmake)
+
+### Components
 - A Raspberry Pico microcontroller
 - One DIP MAX3232 chip or compatible, with 1x TX + 2x RX pins available.
 - 4x 0.1uF capacitors (charge pumps for MAX3232, etc)
@@ -74,9 +79,6 @@ Currently supports emulating a wheeled Microsoft Mouse, with all three buttons a
 - USB-A header to solder on, or alternatively a USB micro to USB-A host adaptor for connecting a USB mouse to the Pico USB port
 - Few bits of wire/board to make connections
 - A suitable serial cable for connecting from the adaptor to the computers serial port
-- Working C building environment
-- cmake version > 3.12
-- Raspberry Pico SDK (Should auto-pull from git on cmake)
 
 ## Build & install
 ```
@@ -89,7 +91,7 @@ This will build `amouse.uf2` which can be flashed onto a Raspberry Pico.
 
 To enter flashing mode with Raspberry Pico by holding down the small white button while connecting it to a USB port. Then simply copy `amouse.uf2` onto the Pico USB drive.
 
-(To be done) See `diagrams` directory for how to wire the Pico correctly to talk to a serial port.
+See `diagrams` directory for how to wire the Pico correctly to talk to a serial port.
 
 ## Usage example
 
@@ -111,7 +113,7 @@ Q: Why Anachro Mouse?
 A: A serial mouse is pretty anachronistic these days, but there's plenty of people who enjoy retro hardware and might find this rather useful. It also makes for a nice wordplay with 'a mouse' and 'anachromous'.
 
 Q: Why a serial mouse?
-A: Lots of people enjoy playing with retro PC hardware and I wanted there to be something that's easy with minimal hardware to use as a serial mouse while the latter are becoming increasingly rare or break.
+A: Lots of people enjoy playing with retro PC hardware and I wanted there to be something that's easy with minimal hardware to use as a serial mouse while the latter are becoming increasingly rare or are breaking.
 
 Q: Anachromous isn't a word.
 A: Neither is that a question. However it sounds like it should be a word.
