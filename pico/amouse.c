@@ -21,6 +21,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#include <math.h>
 #include "pico/stdlib.h"
 
 #include "include/utils.h"
@@ -46,6 +47,7 @@ typedef struct mouse_state {
   int x, y, wheel;
   int update; // How many bytes to send
   int lmb, rmb, mmb, force_update;
+  float sensitivity;
 } mouse_state_t;
 
 // States of mouse init request from PC
@@ -125,17 +127,17 @@ static inline void process_mouse_report(mouse_state_t *mouse, hid_mouse_report_t
   // ### Handle relative movement ###
   if(p_report->x) {
     mouse->x += p_report->x;
-    mouse->x = clamp(mouse->x, -127, 127);
+    mouse->x = clampi(mouse->x, -127, 127);
     push_update(mouse, mouse->mmb);
   }
   if(p_report->y) {
     mouse->y += p_report->y;
-    mouse->y = clamp(mouse->y, -127, 127);
+    mouse->y = clampi(mouse->y, -127, 127);
     push_update(mouse, mouse->mmb);
   }
   if(options.wheel && p_report->wheel) {
       mouse->wheel += p_report->wheel;
-      mouse->wheel  = clamp(mouse->wheel, -15, 15);
+      mouse->wheel  = clampi(mouse->wheel, -15, 15);
       push_update(mouse, true);
   }
 
@@ -171,6 +173,29 @@ void reset_mouse_state(mouse_state_t *mouse) {
 
 /*** Mainline mouse state logic ***/
 
+// Changing settings based on user input
+void runtime_settings(mouse_state_t *mouse) {
+
+  // Sensitivity handling
+ 
+  if(mouse->lmb && mouse->rmb) {
+    // Handle sensitivity changes
+    if(mouse->wheel != 0) {
+      mouse->sensitivity += mouse->wheel / 10;
+      mouse->sensitivity  = clampf(mouse->sensitivity, 0.1, 10.0);
+    }
+
+    if(mouse->mmb) {
+      // Toggle between mouse modes?
+    }
+  }
+
+  if(mouse->sensitivity != 0) {
+    mouse->x = ceil(mouse->x * mouse->sensitivity); // Make sure at least some change occurs.
+    mouse->y = ceil(mouse->y * mouse->sensitivity);
+  }
+}
+
 bool serial_tx(mouse_state_t *mouse) {
   if((mouse->update < 2) && (mouse->force_update == false)) { return(false); } // Minimum report size is 2 (3 bytes)
   int movement;
@@ -200,16 +225,6 @@ bool serial_tx(mouse_state_t *mouse) {
   else                  { txtimer_target = time_us_32() + SERIALDELAY_3B; }
 }
 
-/*void gpio_callback(uint gpio, uint32_t events) {
-  //gpio_event_string(event_str, events);
-  //printf("GPIO %d %s\n", gpio, event_str);
-  if(events & 0x08) {
-    led_state ^= 1; // Flip state between 0/1
-    gpio_put(LED_PIN, led_state);
-    mouse_ident(uart0, options.wheel);
-  }
-}*/
-
 
 /*** Main init & loop ***/
 
@@ -232,12 +247,6 @@ int main() {
   gpio_init(UART_CTS_PIN); 
   gpio_set_dir(UART_CTS_PIN, GPIO_IN);
 
-  // Button
-  //gpio_init(3); // DEBUG
-  //gpio_set_dir(3, GPIO_IN);
-  //gpio_pull_down(3);
-  //gpio_set_irq_enabled_with_callback(3, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
-
   // Set initial serial transmit timer target
   txtimer_target = time_us_32() + SERIALDELAY_3B; 
 
@@ -245,6 +254,8 @@ int main() {
 
   while(1) {
     bool cts_pin = gpio_get(UART_CTS_PIN);
+
+    runtime_settings(&mouse);
 
     // ### Check if mouse driver trying to initialize
     if(cts_pin) { // Computers RTS is low, with MAX3232 this shows reversed as high instead? Check spec.
