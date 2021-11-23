@@ -21,6 +21,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#include <math.h>
 #include "pico/stdlib.h"
 
 #include "include/utils.h"
@@ -45,7 +46,8 @@ typedef struct mouse_state {
   uint8_t state[4]; // Mouse state
   int x, y, wheel;
   int update; // How many bytes to send
-  int lmb, rmb, mmb, force_update;
+  bool lmb, rmb, mmb, force_update;
+  float sensitivity; // Sensitivity coefficient
 } mouse_state_t;
 
 // States of mouse init request from PC
@@ -84,7 +86,7 @@ int led_state = 0;
 /*** Flow control functions ***/
 
 // Make sure we don't clobber higher update requests with lower ones.
-int push_update(mouse_state_t *mouse, int full_packet) {
+int push_update(mouse_state_t *mouse, bool full_packet) {
   if(full_packet || (mouse->update == 3)) { mouse->update = 3; }
   else { mouse->update = 2; }
 }
@@ -123,19 +125,20 @@ static inline void process_mouse_report(mouse_state_t *mouse, hid_mouse_report_t
   }
     
   // ### Handle relative movement ###
+  // Clamp to larger than valid protocol output values to allow for sensitivity scaling.
   if(p_report->x) {
     mouse->x += p_report->x;
-    mouse->x = clamp(mouse->x, -127, 127);
+    mouse->x  = clampi(mouse->x, -36862, 36862); 
     push_update(mouse, mouse->mmb);
   }
   if(p_report->y) {
     mouse->y += p_report->y;
-    mouse->y = clamp(mouse->y, -127, 127);
+    mouse->y  = clampi(mouse->y, -36862, 36862);
     push_update(mouse, mouse->mmb);
   }
   if(options.wheel && p_report->wheel) {
       mouse->wheel += p_report->wheel;
-      mouse->wheel  = clamp(mouse->wheel, -15, 15);
+      mouse->wheel  = clampi(mouse->wheel, -63, 63);
       push_update(mouse, true);
   }
 
@@ -169,7 +172,33 @@ void reset_mouse_state(mouse_state_t *mouse) {
   // Do not reset button states here, will be updated on release of buttons.
 }
 
+
 /*** Mainline mouse state logic ***/
+
+// Changing settings based on user input
+void runtime_settings(mouse_state_t *mouse) {
+
+  // Sensitivity handling
+  if(mouse->lmb && mouse->rmb) {
+    // Handle sensitivity changes
+    if(mouse->wheel != 0) {
+      //mouse->sensitivity += mouse->wheel / 10;
+      if(mouse->wheel < 0) { mouse->sensitivity -= 0.2; }
+      else { mouse->sensitivity += 0.2; }
+      mouse->sensitivity = clampf(mouse->sensitivity, 0.2, 2.0);
+    }
+
+    if(mouse->mmb) {
+      // Toggle between mouse modes?
+    }
+  }
+}
+
+// Adjust mouse input based on sensitivity
+void input_sensitivity(mouse_state_t *mouse) {
+  mouse->x = mouse->x * mouse->sensitivity;
+  mouse->y = mouse->y * mouse->sensitivity;
+}
 
 bool serial_tx(mouse_state_t *mouse) {
   if((mouse->update < 2) && (mouse->force_update == false)) { return(false); } // Minimum report size is 2 (3 bytes)
@@ -179,6 +208,11 @@ bool serial_tx(mouse_state_t *mouse) {
   mouse->state[0] |= (mouse->lmb << MOUSE_LMB_BIT);
   mouse->state[0] |= (mouse->rmb << MOUSE_RMB_BIT);
   mouse->state[3] |= (mouse->mmb << MOUSE_MMB_BIT);
+
+  // Clamp x, y, wheel inputs to values allowable by protocol.  
+  mouse->x     = clampi(mouse->x, -127, 127);
+  mouse->y     = clampi(mouse->y, -127, 127);
+  mouse->wheel = clampi(mouse->wheel, -15, 15);
 
   // Update aggregated mouse movement state
   movement = mouse->x & 0xc0; // Get 2 upper bits of X movement
@@ -200,16 +234,6 @@ bool serial_tx(mouse_state_t *mouse) {
   else                  { txtimer_target = time_us_32() + SERIALDELAY_3B; }
 }
 
-/*void gpio_callback(uint gpio, uint32_t events) {
-  //gpio_event_string(event_str, events);
-  //printf("GPIO %d %s\n", gpio, event_str);
-  if(events & 0x08) {
-    led_state ^= 1; // Flip state between 0/1
-    gpio_put(LED_PIN, led_state);
-    mouse_ident(uart0, options.wheel);
-  }
-}*/
-
 
 /*** Main init & loop ***/
 
@@ -220,6 +244,8 @@ int main() {
   // Set up initial state 
   //enable_pins(UART_RTS_BIT | UART_DTR_BIT);
   reset_mouse_state(&mouse);
+  mouse.pc_state = CTS_UNINIT;
+  mouse.sensitivity = 1.0;
 
   // Initialize USB
   tusb_init();
@@ -232,16 +258,8 @@ int main() {
   gpio_init(UART_CTS_PIN); 
   gpio_set_dir(UART_CTS_PIN, GPIO_IN);
 
-  // Button
-  //gpio_init(3); // DEBUG
-  //gpio_set_dir(3, GPIO_IN);
-  //gpio_pull_down(3);
-  //gpio_set_irq_enabled_with_callback(3, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
-
   // Set initial serial transmit timer target
   txtimer_target = time_us_32() + SERIALDELAY_3B; 
-
-  mouse.pc_state = CTS_UNINIT;
 
   while(1) {
     bool cts_pin = gpio_get(UART_CTS_PIN);
@@ -265,8 +283,11 @@ int main() {
 
       tuh_task(); // tinyusb host task
       hid_task(); // hid/mouse handling
+ 
+      runtime_settings(&mouse);
 
       if(time_reached(txtimer_target) || mouse.force_update) {
+	input_sensitivity(&mouse);
 	serial_tx(&mouse);
       }
 

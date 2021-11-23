@@ -28,7 +28,13 @@ const char * byte_to_bitstring(uint8_t val) {
  return buffer;
 }
 
-int clamp(int value, int min, int max) {
+int clampi(int value, int min, int max) {
+  if(value > max) { return max; }
+  if(value < min) { return min; }
+  return value;
+}
+
+float clampf(float value, float min, float max) {
   if(value > max) { return max; }
   if(value < min) { return min; }
   return value;

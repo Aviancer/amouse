@@ -19,6 +19,8 @@
 
 const char * byte_to_bitstring(uint8_t val);
 
-int clamp(int value, int min, int max);
+int clampi(int value, int min, int max);
+
+float clampf(float value, float min, float max);
 
 #endif // UTILS_H_
