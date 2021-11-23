@@ -102,9 +102,12 @@ See `diagrams` directory for how to wire the Pico correctly to talk to a serial 
 
 Provided that everything is connected up correctly, the adaptor will auto-detect any mouse driver initialization from the PC and introduce itself as a Microsoft mouse. You can then use your USB mouse as a serial mouse.
 
+## Sensitivity control
+
+Hold down left and right mouse buttons and scroll up to add sensitivity, scroll down to reduce sensitivity. One mouse wheel click adds/reduces sensitivty by a factor of 0.2, you can adjust sensitivity between 0.2 and 2.0. 
+
 # Planned future features
 
-- Sensitivity control
 - Switching between at least wheeled and non-wheeled Microsoft mouse protocols (Already implemented in Linux version)
 
 # FAQ
