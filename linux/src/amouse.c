@@ -151,6 +151,53 @@ static int open_usbinput(const char* device, int exclusive) {
   return -1;
 }
 
+static inline void process_mouse_report(mouse_state_t *mouse, struct input_event const *ev, struct opts *options) {
+  /** Handle mouse buttons ***/
+  if(ev->type == EV_KEY) {
+    switch(ev->code) {
+      case BTN_LEFT:
+	mouse->lmb = ev->value;
+	mouse->force_update = 1;
+	push_update(mouse, mouse->mmb);
+	break;
+      case BTN_RIGHT:
+	mouse->rmb = ev->value;
+	mouse->force_update = 1;
+	push_update(mouse, mouse->mmb);
+	break;
+      case BTN_MIDDLE:
+	if(options->wheel) {
+	  mouse->mmb = ev->value;
+	  mouse->force_update = 1;
+	  push_update(mouse, 1); // Every time MMB changes (on or off), must send 4 bytes.
+	}
+	break;
+    }
+  }
+  
+  /*** Handle relative movement ***/
+  else if (ev->type == EV_REL) {
+    switch(ev->code) {
+      case REL_X:
+	mouse->x += ev->value;
+	mouse->x = clampi(mouse->x, -127, 127);
+	break;
+      case REL_Y:
+	mouse->y += ev->value;
+	mouse->y = clampi(mouse->y, -127, 127);
+	break;
+      case REL_WHEEL:
+	if(options->wheel) {
+	  mouse->wheel += ev->value;
+	  mouse->wheel = clampi(mouse->wheel, -15, 15);
+	  push_update(mouse, 1);
+	}
+	break;
+    }
+    push_update(mouse, mouse->mmb);
+  }
+}
+
 
 /*** Main init & loop ***/
 
@@ -210,7 +257,6 @@ int main(int argc, char **argv) {
   mouse_state_t mouse;
   reset_mouse_state(&mouse); // Set packet memory to initial state
 
-  int movement;
   int i; // Allocate outside main loop instead of allocating every time.
 
   time_target = get_target_time(NS_SERIALDELAY_3B);
@@ -254,50 +300,7 @@ int main(int argc, char **argv) {
 
     if (libevdev_next_event(mouse_dev, LIBEVDEV_READ_FLAG_NORMAL, &ev) == LIBEVDEV_READ_STATUS_SUCCESS) {
 
-      /** Handle mouse buttons ***/
-      if(ev.type == EV_KEY) {
-	switch(ev.code) {
-	  case BTN_LEFT:
-	    mouse.lmb = ev.value;
-	    mouse.force_update = 1;
-	    push_update(&mouse, mouse.mmb);
-	    break;
-	  case BTN_RIGHT:
-	    mouse.rmb = ev.value;
-	    mouse.force_update = 1;
-	    push_update(&mouse, mouse.mmb);
-	    break;
-	  case BTN_MIDDLE:
-	    if(options->wheel) {
-  	      mouse.mmb = ev.value;
-	      mouse.force_update = 1;
-	      push_update(&mouse, 1); // Every time MMB changes (on or off), must send 4 bytes.
-	    }
-	    break;
-        }
-      }
-      
-      /*** Handle relative movement ***/
-      else if (ev.type == EV_REL) {
-	switch(ev.code) {
-	  case REL_X:
-	    mouse.x += ev.value;
-            mouse.x = clampi(mouse.x, -127, 127);
-	    break;
-          case REL_Y:
- 	    mouse.y += ev.value;
-            mouse.y = clampi(mouse.y, -127, 127);
-	    break;
-	  case REL_WHEEL:
-	    if(options->wheel) {
-	      mouse.wheel += ev.value;
-              mouse.wheel = clampi(mouse.wheel, -15, 15);
-	      push_update(&mouse, 1);
-	    }
-	    break;
-	}
-	push_update(&mouse, mouse.mmb);
-      }
+      process_mouse_report(&mouse, &ev, options);
 
       /*** Send mouse state updates clamped to baud max rate ***/ 
       clock_gettime(CLOCK_MONOTONIC, &time_now);
@@ -305,21 +308,7 @@ int main(int argc, char **argv) {
 
       if((time_diff.tv_sec < 0 && mouse.update > -1) || mouse.force_update) {
 
-        // Set mouse button states	
-	mouse.state[0] |= (mouse.lmb << MOUSE_LMB_BIT);
-	mouse.state[0] |= (mouse.rmb << MOUSE_RMB_BIT);
-	mouse.state[3] |= (mouse.mmb << MOUSE_MMB_BIT);
-
-	// Update aggregated mouse movement state
-        movement = mouse.x & 0xc0; // Get 2 upper bits of X movement
-	mouse.state[0] = mouse.state[0] | (movement >> 6); // Sets bit based on ev.value, 8th bit to 2nd bit (Discards bits)
-	mouse.state[1] = mouse.state[1] | (mouse.x & 0x3f); 
-
-        movement = mouse.y & 0xc0; // Get 2 upper bits of Y movement
-	mouse.state[0] = mouse.state[0] | (movement >> 4);
-	mouse.state[2] = mouse.state[2] | (mouse.y & 0x3f); 
-
-	mouse.state[3] = mouse.state[3] | (-mouse.wheel & 0x0f); // 127(negatives) when scrolling up, 1(positives) when scrolling down.
+        update_mouse_state(&mouse);
 
 	// Send updates
         for(i=0; i <= mouse.update; i++) {
@@ -335,9 +324,6 @@ int main(int argc, char **argv) {
 	// Use variable send rate depending on whether middle mouse button pressed or not (3 or 4 byte updates)
 	if(mouse.mmb) { time_target = get_target_time(NS_SERIALDELAY_4B); }
 	else          { time_target = get_target_time(NS_SERIALDELAY_3B); }
-        mouse.update = -1;
-	mouse.force_update = 0;
-	mouse.x = mouse.y = mouse.wheel = 0;
 
 	reset_mouse_state(&mouse);
       }

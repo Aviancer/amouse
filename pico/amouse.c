@@ -68,8 +68,8 @@ int led_state = 0;
 void queue_tx(mouse_state_t *mouse) {
   // Update timer target for next transmit
   // Use variable send rate depending on whether a 3 or 4 byte update was sent
-  if(mouse->update > 2) { txtimer_target = time_us_32() + SERIALDELAY_4B; }
-  else                  { txtimer_target = time_us_32() + SERIALDELAY_3B; }
+  if(mouse->update > 2) { txtimer_target = time_us_32() + U_SERIALDELAY_4B; }
+  else                  { txtimer_target = time_us_32() + U_SERIALDELAY_3B; }
 }
 
 
@@ -198,7 +198,7 @@ int main() {
   gpio_set_dir(UART_CTS_PIN, GPIO_IN);
 
   // Set initial serial transmit timer target
-  txtimer_target = time_us_32() + SERIALDELAY_3B; 
+  txtimer_target = time_us_32() + U_SERIALDELAY_3B; 
 
   while(1) {
     bool cts_pin = gpio_get(UART_CTS_PIN);
