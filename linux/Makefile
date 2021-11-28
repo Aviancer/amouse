@@ -11,10 +11,12 @@
 # You should have received a copy of the GNU Lesser General Public License along with this library; 
 # if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-.DEFAULT_GOAL := all
-SRC_DIR       := src
-BIN_DIR       := bin
-C_SOURCES     := $(shell find $(SRC_DIR) -name '*.c')
+.DEFAULT_GOAL  := all
+SRC_DIR        := src
+SHARED_DIR     := ../shared
+BIN_DIR        := bin
+C_SOURCES      := $(shell find $(SRC_DIR) -name '*.c')
+C_SHARED       := $(shell find $(SHARED_DIR) -name '*.c')
 
 CC = gcc
 CFLAGS = -g -Wall
@@ -22,16 +24,19 @@ INCLUDES = -levdev -I/usr/include/libevdev-1.0/libevdev -I./include
 
 TARGET = amouse
 
-all: serial.o utils.o ${TARGET}
+all: serial.o utils.o mouse.o ${TARGET}
 
 ${TARGET}: ${SRC_DIR}/${TARGET}.c
-	${CC} ${CFLAGS} ${INCLUDES} -o ${BIN_DIR}/${TARGET} ${C_SOURCES}
+	${CC} ${CFLAGS} ${INCLUDES} -o ${BIN_DIR}/${TARGET} ${C_SOURCES} ${C_SHARED}
 
-utils.o: ${SRC_DIR}/include/utils.c ${SRC_DIR}/include/utils.h
-	${CC} ${CFLAGS} -c ${SRC_DIR}/include/utils.c -o ${SRC_DIR}/include/utils.o
+utils.o: ${SRC_DIR}/../../shared/utils.c ${SRC_DIR}/../../shared/utils.h
+	${CC} ${CFLAGS} -c ${SRC_DIR}/../../shared/utils.c -o ${SRC_DIR}/include/utils.o
 
 serial.o: ${SRC_DIR}/include/serial.c ${SRC_DIR}/include/serial.h
 	${CC} ${CFLAGS} -c ${SRC_DIR}/include/serial.c -o ${SRC_DIR}/include/serial.o
+
+mouse.o: ${SRC_DIR}/../../shared/mouse.c ${SRC_DIR}/../../shared/mouse.h
+	${CC} ${CFLAGS} -c ${SRC_DIR}/../../shared/mouse.c -o ${SRC_DIR}/include/mouse.o
 
 clean:
 	${RM} ${BIN_DIR}/${TARGET}

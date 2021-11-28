@@ -17,12 +17,19 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+
+#ifdef __linux__
+#include <stdlib.h>
+#else 
 #include "pico/stdlib.h"
+#endif 
 
 #include "mouse.h"
 #include "utils.h"
 
-uint32_t serial_tx(mouse_state_t *mouse) {
+uint8_t init_mouse_state[] = "\x40\x00\x00\x00"; // Our basic mouse packet (We send 3 or 4 bytes of it)
+
+bool update_mouse_state(mouse_state_t *mouse) {
   if((mouse->update < 2) && (mouse->force_update == false)) { return(false); } // Minimum report size is 2 (3 bytes)
   int movement;
 
@@ -47,10 +54,7 @@ uint32_t serial_tx(mouse_state_t *mouse) {
 
   mouse->state[3] = mouse->state[3] | (-mouse->wheel & 0x0f); // 127(negatives) when scrolling up, 1(positives) when scrolling down.
 
-  // Update timer target for next transmit
-  // Use variable send rate depending on whether a 3 or 4 byte update was sent
-  if(mouse->update > 2) { return time_us_32() + SERIALDELAY_4B; }
-  else                  { return time_us_32() + SERIALDELAY_3B; }
+  return(true);
 }
 
 void reset_mouse_state(mouse_state_t *mouse) {
@@ -64,7 +68,7 @@ void reset_mouse_state(mouse_state_t *mouse) {
 /*** Flow control functions ***/
 
 // Make sure we don't clobber higher update requests with lower ones.
-int push_update(mouse_state_t *mouse, bool full_packet) {
+void push_update(mouse_state_t *mouse, bool full_packet) {
   if(full_packet || (mouse->update == 3)) { mouse->update = 3; }
   else { mouse->update = 2; }
 }

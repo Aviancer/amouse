@@ -17,6 +17,8 @@
 #ifndef MOUSE_H_
 #define MOUSE_H_
 
+#include <stdbool.h>
+
 /* Protocol definitions */
 #define MOUSE_LMB_BIT 5 // Defines << shift for bit position
 #define MOUSE_RMB_BIT 4
@@ -30,6 +32,9 @@
 // 44.44.. updates per second with 3 bytes.
 // 33.25.. updates per second with 4 bytes.
 // ~0.0075 seconds per byte, target time calculated for 4 bytes.
+#define NS_FULL_SECOND    1000000000L   // 1s in nanoseconds
+#define NS_SERIALDELAY_3B   22700000 // 3 bytes
+#define NS_SERIALDELAY_4B   30000000 // 4 bytes
 
 // Struct for storing information about accumulated mouse state
 typedef struct mouse_state {
@@ -48,12 +53,12 @@ enum PC_INIT_STATES {
   CTS_TOGGLED  = 2  // CTS was low, now high -> do ident.
 };
 
-static uint8_t init_mouse_state[] = "\x40\x00\x00\x00"; // Our basic mouse packet (We send 3 or 4 bytes of it)
+/* Functions */
 
-uint32_t serial_tx(mouse_state_t *mouse);
+bool update_mouse_state(mouse_state_t *mouse);
 
 void reset_mouse_state(mouse_state_t *mouse);
 
-int push_update(mouse_state_t *mouse, bool full_packet);
+void push_update(mouse_state_t *mouse, bool full_packet);
 
 #endif // MOUSE_H_

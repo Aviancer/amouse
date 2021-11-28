@@ -24,13 +24,15 @@
 #include <time.h>     // for time()
 
 #include "include/version.h"
-#include "include/utils.h"
 #include "include/serial.h"
+#include "../../shared/mouse.h"
+#include "../../shared/utils.h"
 
 // Linux specific
 #include <sys/ioctl.h> // ioctl (serial pins, mouse exclusive access)
 #include <libevdev.h>  // input dev
 #include <getopt.h>    // getopt
+
 
 /*** Program parameters ***/ 
 
@@ -38,6 +40,19 @@ char title[] =
 R"#(  __ _   _ __  ___ _  _ ___ ___ 
  / _` | | '  \/ _ \ || (_-</ -_)
  \__,_| |_|_|_\___/\_,_/__/\___=====_____)#";
+
+// Struct for storing pointers to dynamically allocated memory containing options.
+struct opts {
+  char *mousepath; // Pointers, memory is dynamically allocated.
+  char *serialpath;
+  int wheel;
+  int exclusive;
+  int immediate;
+  int debug;
+};
+
+
+/*** Linux console ***/
 
 void showhelp(char *argv[]) {
   printf("%s\n\n", title);
@@ -50,25 +65,6 @@ void showhelp(char *argv[]) {
 	 "  -i Immediate ident mode, disables waiting for CTS pin\n" \
 	 "  -d Print out debug information on mouse state\n", V_MAJOR, V_MINOR, V_REVISION, argv[0]);
 }
-
-// Struct for storing pointers to dynamically allocated memory containing options.
-struct opts {
-  char *mousepath; // Pointers, memory is dynamically allocated.
-  char *serialpath;
-  int wheel;
-  int exclusive;
-  int immediate;
-  int debug;
-};
-
-// Struct for storing information about accumulated mouse state
-typedef struct mouse_state {
-  int pc_state; // Current state of mouse driver initialization on PC.
-  uint8_t state[4]; // Mouse state
-  int x, y, wheel;
-  int update; // How many bytes to send
-  int lmb, rmb, mmb, force_update;
-} mouse_state_t;
 
 void parse_opts(int argc, char **argv, struct opts *options) {
   int option_index = 0;
@@ -118,6 +114,9 @@ void parse_opts(int argc, char **argv, struct opts *options) {
   if(quit != 0) { exit(0); }
 }
 
+void aprint(const char *message) {
+    printf("amouse> %s\n", message);
+}
 
 /*** USB comms ***/
 
@@ -150,15 +149,6 @@ static int open_usbinput(const char* device, int exclusive) {
 
   close(fd);
   return -1;
-}
-
-
-/*** Flow control functions ***/
-
-// Make sure we don't clobber higher update requests with lower ones.
-void push_update(mouse_state_t *mouse, int full_packet) {
-  if(full_packet || (mouse->update == 3)) { mouse->update = 3; }
-  else { mouse->update = 2; }
 }
 
 
@@ -217,14 +207,13 @@ int main(int argc, char **argv) {
   
   // Aggregate movements before sending
   struct timespec time_now, time_target, time_diff;
-  uint8_t init_mouse_state[] = "\x40\x00\x00\x00"; // Our basic mouse packet (We send 3 or 4 bytes of it)
   mouse_state_t mouse;
-  memcpy( mouse.state, init_mouse_state, sizeof(mouse.state) ); // Set packet memory to initial state
+  reset_mouse_state(&mouse); // Set packet memory to initial state
 
   int movement;
   int i; // Allocate outside main loop instead of allocating every time.
 
-  time_target = get_target_time(SERIALDELAY_3B);
+  time_target = get_target_time(NS_SERIALDELAY_3B);
   
   printf("%s\n\n", title);
   aprint("Waiting for PC to initialize mouse driver..");
@@ -293,16 +282,16 @@ int main(int argc, char **argv) {
 	switch(ev.code) {
 	  case REL_X:
 	    mouse.x += ev.value;
-            mouse.x = clamp(mouse.x, -127, 127);
+            mouse.x = clampi(mouse.x, -127, 127);
 	    break;
           case REL_Y:
  	    mouse.y += ev.value;
-            mouse.y = clamp(mouse.y, -127, 127);
+            mouse.y = clampi(mouse.y, -127, 127);
 	    break;
 	  case REL_WHEEL:
 	    if(options->wheel) {
 	      mouse.wheel += ev.value;
-              mouse.wheel = clamp(mouse.wheel, -15, 15);
+              mouse.wheel = clampi(mouse.wheel, -15, 15);
 	      push_update(&mouse, 1);
 	    }
 	    break;
@@ -344,13 +333,13 @@ int main(int argc, char **argv) {
 	if(options->debug) { printf("\n"); }
 
 	// Use variable send rate depending on whether middle mouse button pressed or not (3 or 4 byte updates)
-	if(mouse.mmb) { time_target = get_target_time(SERIALDELAY_4B); }
-	else          { time_target = get_target_time(SERIALDELAY_3B); }
+	if(mouse.mmb) { time_target = get_target_time(NS_SERIALDELAY_4B); }
+	else          { time_target = get_target_time(NS_SERIALDELAY_3B); }
         mouse.update = -1;
 	mouse.force_update = 0;
 	mouse.x = mouse.y = mouse.wheel = 0;
 
-        memcpy( mouse.state, init_mouse_state, sizeof(mouse.state) ); // Reset packet to initial state
+	reset_mouse_state(&mouse);
       }
  
       usleep(1);

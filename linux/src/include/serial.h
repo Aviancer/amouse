@@ -16,16 +16,6 @@
 #ifndef SERIAL_H_
 #define SERIAL_H_
 
-/* Protocol definitions */
-#define MOUSE_LMB_BIT 5 // Defines << shift for bit position
-#define MOUSE_RMB_BIT 4
-#define MOUSE_MMB_BIT 4 // Shift 4 times in 4th byte
-
-// Delay between data packets for 1200 baud
-#define NS_FULL_SECOND 1000000000L   // 1s in nanoseconds
-#define SERIALDELAY_3B   22700000    // 3 bytes
-#define SERIALDELAY_4B   30000000    // 4 bytes
-
 int serial_write(int fd, uint8_t *buffer, int size);
 
 int get_pin(int fd, int flag);

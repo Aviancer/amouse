@@ -25,6 +25,7 @@
 #include <sys/ioctl.h> // ioctl (serial pins, mouse exclusive access)
 
 #include "serial.h"
+#include "../../../shared/mouse.h"
 
 uint8_t pkt_intellimouse_intro[] = "\x4D\x5A";
  

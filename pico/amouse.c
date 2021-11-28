@@ -63,6 +63,16 @@ const uint LED_PIN = PICO_DEFAULT_LED_PIN;
 int led_state = 0;
 
 
+/*** Timing ***/
+
+void queue_tx(mouse_state_t *mouse) {
+  // Update timer target for next transmit
+  // Use variable send rate depending on whether a 3 or 4 byte update was sent
+  if(mouse->update > 2) { txtimer_target = time_us_32() + SERIALDELAY_4B; }
+  else                  { txtimer_target = time_us_32() + SERIALDELAY_3B; }
+}
+
+
 /*** USB comms ***/
 
 void tuh_hid_mouse_mounted_cb(uint8_t dev_addr) {
@@ -218,7 +228,8 @@ int main() {
       if(time_reached(txtimer_target) || mouse.force_update) {
 	input_sensitivity(&mouse);
 
-	txtimer_target = serial_tx(&mouse);
+	update_mouse_state(&mouse);
+	queue_tx(&mouse);
         serial_write(uart0, mouse.state, mouse.update);
         reset_mouse_state(&mouse);
       }
