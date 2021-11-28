@@ -15,7 +15,7 @@ project(amouse)
 pico_sdk_init()
 
 add_executable(amouse
-  	amouse.c include/serial.c include/utils.c
+  	amouse.c ../shared/mouse.c ../shared/utils.c include/serial.c 
         )
 
 target_include_directories(amouse PRIVATE ${CMAKE_CURRENT_LIST_DIR})
@@ -23,8 +23,8 @@ target_include_directories(amouse PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 # Pull in our pico_stdlib which pulls in commonly used features, also tinyUSB for HID
 target_link_libraries(amouse pico_stdlib tinyusb_host tinyusb_board)
 
-include_directories(include/)
-link_directories(include/)
+include_directories(include/ ../lib/)
+link_directories(include/ ../lib/)
 
 # create map/bin/hex file etc.
 pico_add_extra_outputs(amouse)

@@ -104,11 +104,12 @@ Provided that everything is connected up correctly, the adaptor will auto-detect
 
 ## Sensitivity control
 
-Hold down left and right mouse buttons and scroll up to add sensitivity, scroll down to reduce sensitivity. One mouse wheel click adds/reduces sensitivty by a factor of 0.2, you can adjust sensitivity between 0.2 and 2.0. 
+Hold down left and right mouse buttons and scroll up to add sensitivity, scroll down to reduce sensitivity. One mouse wheel click adds/reduces sensitivity by a factor of 0.2, you can adjust sensitivity between 0.2 and 2.0. 
 
 # Planned future features
 
 - Switching between at least wheeled and non-wheeled Microsoft mouse protocols (Already implemented in Linux version)
+- Storing settings like sensitivity and used mouse protocol in a non-volatile manner.
 
 # FAQ
 

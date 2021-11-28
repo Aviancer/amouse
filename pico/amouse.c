@@ -18,14 +18,13 @@
  *
 */
 
-#include <string.h>
-#include <stdlib.h>
 #include <time.h>
-#include <math.h>
+#include "stdbool.h"
 #include "pico/stdlib.h"
 
-#include "include/utils.h"
 #include "include/serial.h"
+#include "../shared/utils.h"
+#include "../shared/mouse.h"
 
 #include "bsp/board.h"
 #include "tusb.h"
@@ -40,23 +39,6 @@ typedef struct opts {
   int wheel;
 } opts_t;
 
-// Struct for storing information about accumulated mouse state
-typedef struct mouse_state {
-  int pc_state; // Current state of mouse driver initialization on PC.
-  uint8_t state[4]; // Mouse state
-  int x, y, wheel;
-  int update; // How many bytes to send
-  bool lmb, rmb, mmb, force_update;
-  float sensitivity; // Sensitivity coefficient
-} mouse_state_t;
-
-// States of mouse init request from PC
-enum PC_INIT_STATES {
-  CTS_UNINIT   = 0, // Initial state
-  CTS_LOW_INIT = 1, // CTS pin has been set low, wait for high.
-  CTS_TOGGLED  = 2  // CTS was low, now high -> do ident.
-};
-
 void set_opts(struct opts *options) {
   options->wheel = 1;
 }
@@ -66,8 +48,6 @@ void set_opts(struct opts *options) {
 
 // Set default options, support mouse wheel.
 opts_t options = { .wheel=1 };
-
-static uint8_t init_mouse_state[] = "\x40\x00\x00\x00"; // Our basic mouse packet (We send 3 or 4 bytes of it)
 
 extern mouse_state_t mouse; // Needs to be available for serial functions.
 mouse_state_t mouse; // int values default to 0 
@@ -81,15 +61,6 @@ CFG_TUSB_MEM_SECTION static hid_mouse_report_t usb_mouse_report_prev;
 // DEBUG
 const uint LED_PIN = PICO_DEFAULT_LED_PIN;
 int led_state = 0;
-
-
-/*** Flow control functions ***/
-
-// Make sure we don't clobber higher update requests with lower ones.
-int push_update(mouse_state_t *mouse, bool full_packet) {
-  if(full_packet || (mouse->update == 3)) { mouse->update = 3; }
-  else { mouse->update = 2; }
-}
 
 
 /*** USB comms ***/
@@ -164,14 +135,6 @@ void hid_task(void) {
   }
 }
 
-void reset_mouse_state(mouse_state_t *mouse) {
-  memcpy( mouse->state, init_mouse_state, sizeof(mouse->state) ); // Set packet memory to initial state
-  mouse->update = -1;
-  mouse->force_update = 0;
-  mouse->x = mouse->y = mouse->wheel = 0;
-  // Do not reset button states here, will be updated on release of buttons.
-}
-
 
 /*** Mainline mouse state logic ***/
 
@@ -198,40 +161,6 @@ void runtime_settings(mouse_state_t *mouse) {
 void input_sensitivity(mouse_state_t *mouse) {
   mouse->x = mouse->x * mouse->sensitivity;
   mouse->y = mouse->y * mouse->sensitivity;
-}
-
-bool serial_tx(mouse_state_t *mouse) {
-  if((mouse->update < 2) && (mouse->force_update == false)) { return(false); } // Minimum report size is 2 (3 bytes)
-  int movement;
-
-  // Set mouse button states	
-  mouse->state[0] |= (mouse->lmb << MOUSE_LMB_BIT);
-  mouse->state[0] |= (mouse->rmb << MOUSE_RMB_BIT);
-  mouse->state[3] |= (mouse->mmb << MOUSE_MMB_BIT);
-
-  // Clamp x, y, wheel inputs to values allowable by protocol.  
-  mouse->x     = clampi(mouse->x, -127, 127);
-  mouse->y     = clampi(mouse->y, -127, 127);
-  mouse->wheel = clampi(mouse->wheel, -15, 15);
-
-  // Update aggregated mouse movement state
-  movement = mouse->x & 0xc0; // Get 2 upper bits of X movement
-  mouse->state[0] = mouse->state[0] | (movement >> 6); // Sets bit based on ev.value, 8th bit to 2nd bit (Discards bits)
-  mouse->state[1] = mouse->state[1] | (mouse->x & 0x3f); 
-
-  movement = mouse->y & 0xc0; // Get 2 upper bits of Y movement
-  mouse->state[0] = mouse->state[0] | (movement >> 4);
-  mouse->state[2] = mouse->state[2] | (mouse->y & 0x3f); 
-
-  mouse->state[3] = mouse->state[3] | (-mouse->wheel & 0x0f); // 127(negatives) when scrolling up, 1(positives) when scrolling down.
-
-  serial_write(uart0, mouse->state, mouse->update);
-  reset_mouse_state(mouse);
-
-  // Update timer target for next transmit
-  // Use variable send rate depending on whether a 3 or 4 byte update was sent
-  if(mouse->update > 2) { txtimer_target = time_us_32() + SERIALDELAY_4B; }
-  else                  { txtimer_target = time_us_32() + SERIALDELAY_3B; }
 }
 
 
@@ -288,7 +217,10 @@ int main() {
 
       if(time_reached(txtimer_target) || mouse.force_update) {
 	input_sensitivity(&mouse);
-	serial_tx(&mouse);
+
+	txtimer_target = serial_tx(&mouse);
+        serial_write(uart0, mouse.state, mouse.update);
+        reset_mouse_state(&mouse);
       }
 
     }

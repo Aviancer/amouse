@@ -17,20 +17,6 @@
 #ifndef SERIAL_H_
 #define SERIAL_H_
 
-/* Protocol definitions */
-#define MOUSE_LMB_BIT 5 // Defines << shift for bit position
-#define MOUSE_RMB_BIT 4
-#define MOUSE_MMB_BIT 4 // Shift 4 times in 4th byte
-
-// Delay between data packets for 1200 baud
-#define U_FULL_SECOND 1000000L      // 1s in microseconds
-#define SERIALDELAY_3B  22700       // 3 bytes (microseconds)
-#define SERIALDELAY_4B  30000       // 4 bytes (microseconds)
-// 1200 baud (bits/s) is 133.333333333... bytes/s
-// 44.44.. updates per second with 3 bytes.
-// 33.25.. updates per second with 4 bytes.
-// ~0.0075 seconds per byte, target time calculated for 4 bytes.
-
 // Which pin has which function
 // Serial spec (Fem): TX(2), RX(3), DSR(4), DTR(6), CTS(7), RTS(8)
 //                    GRN    YLW    ORN     BLU     WHI     BLK
