@@ -20,6 +20,7 @@ The adapter has been tested to work against DOS and Windows 95 serial mouse driv
 Once the mouse is initialized - hold down both left and right mouse buttons. Then additionally:
 - Scroll mouse wheel up to add sensitivity
 - Scroll mouse wheel down to reduce sensitivity
+
 One mouse wheel click adds/reduces sensitivity by a factor of 0.2, you can adjust sensitivity between 0.2 and 2.0. 
 
 # Linux version
