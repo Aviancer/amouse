@@ -77,7 +77,6 @@ void runtime_settings(mouse_state_t *mouse) {
   if(mouse->lmb && mouse->rmb) {
     // Handle sensitivity changes
     if(mouse->wheel != 0) {
-      //mouse->sensitivity += mouse->wheel / 10;
       if(mouse->wheel < 0) { mouse->sensitivity -= 0.2; }
       else { mouse->sensitivity += 0.2; }
       mouse->sensitivity = clampf(mouse->sensitivity, 0.2, 2.0);

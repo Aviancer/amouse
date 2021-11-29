@@ -195,9 +195,8 @@ int main() {
       tuh_task(); // tinyusb host task
       hid_task(); // hid/mouse handling
  
-      runtime_settings(&mouse);
-
       if(time_reached(txtimer_target) || mouse.force_update) {
+        runtime_settings(&mouse);
 	input_sensitivity(&mouse);
 	update_mouse_state(&mouse);
 
