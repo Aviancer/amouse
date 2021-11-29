@@ -146,34 +146,6 @@ void hid_task(void) {
 }
 
 
-/*** Mainline mouse state logic ***/
-
-// Changing settings based on user input
-void runtime_settings(mouse_state_t *mouse) {
-
-  // Sensitivity handling
-  if(mouse->lmb && mouse->rmb) {
-    // Handle sensitivity changes
-    if(mouse->wheel != 0) {
-      //mouse->sensitivity += mouse->wheel / 10;
-      if(mouse->wheel < 0) { mouse->sensitivity -= 0.2; }
-      else { mouse->sensitivity += 0.2; }
-      mouse->sensitivity = clampf(mouse->sensitivity, 0.2, 2.0);
-    }
-
-    if(mouse->mmb) {
-      // Toggle between mouse modes?
-    }
-  }
-}
-
-// Adjust mouse input based on sensitivity
-void input_sensitivity(mouse_state_t *mouse) {
-  mouse->x = mouse->x * mouse->sensitivity;
-  mouse->y = mouse->y * mouse->sensitivity;
-}
-
-
 /*** Main init & loop ***/
 
 int main() {
@@ -227,9 +199,9 @@ int main() {
 
       if(time_reached(txtimer_target) || mouse.force_update) {
 	input_sensitivity(&mouse);
-
 	update_mouse_state(&mouse);
-	queue_tx(&mouse);
+
+	queue_tx(&mouse); // Update next serial timing
         serial_write(uart0, mouse.state, mouse.update);
         reset_mouse_state(&mouse);
       }

@@ -27,7 +27,12 @@
 #include "mouse.h"
 #include "utils.h"
 
+/*** Shared definitions ***/
+
 uint8_t init_mouse_state[] = "\x40\x00\x00\x00"; // Our basic mouse packet (We send 3 or 4 bytes of it)
+
+
+/*** Shared mouse functions ***/
 
 bool update_mouse_state(mouse_state_t *mouse) {
   if((mouse->update < 2) && (mouse->force_update == false)) { return(false); } // Minimum report size is 2 (3 bytes)
@@ -65,6 +70,32 @@ void reset_mouse_state(mouse_state_t *mouse) {
   // Do not reset button states here, will be updated on release of buttons.
 }
 
+// Changing settings based on user input
+void runtime_settings(mouse_state_t *mouse) {
+
+  // Sensitivity handling
+  if(mouse->lmb && mouse->rmb) {
+    // Handle sensitivity changes
+    if(mouse->wheel != 0) {
+      //mouse->sensitivity += mouse->wheel / 10;
+      if(mouse->wheel < 0) { mouse->sensitivity -= 0.2; }
+      else { mouse->sensitivity += 0.2; }
+      mouse->sensitivity = clampf(mouse->sensitivity, 0.2, 2.0);
+    }
+
+    if(mouse->mmb) {
+      // Toggle between mouse modes?
+    }
+  }
+}
+
+// Adjust mouse input based on sensitivity
+void input_sensitivity(mouse_state_t *mouse) {
+  mouse->x = mouse->x * mouse->sensitivity;
+  mouse->y = mouse->y * mouse->sensitivity;
+}
+
+
 /*** Flow control functions ***/
 
 // Make sure we don't clobber higher update requests with lower ones.
@@ -72,4 +103,3 @@ void push_update(mouse_state_t *mouse, bool full_packet) {
   if(full_packet || (mouse->update == 3)) { mouse->update = 3; }
   else { mouse->update = 2; }
 }
-

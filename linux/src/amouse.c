@@ -157,19 +157,19 @@ static inline void process_mouse_report(mouse_state_t *mouse, struct input_event
     switch(ev->code) {
       case BTN_LEFT:
 	mouse->lmb = ev->value;
-	mouse->force_update = 1;
+	mouse->force_update = true;
 	push_update(mouse, mouse->mmb);
 	break;
       case BTN_RIGHT:
 	mouse->rmb = ev->value;
-	mouse->force_update = 1;
+	mouse->force_update = true;
 	push_update(mouse, mouse->mmb);
 	break;
       case BTN_MIDDLE:
 	if(options->wheel) {
 	  mouse->mmb = ev->value;
-	  mouse->force_update = 1;
-	  push_update(mouse, 1); // Every time MMB changes (on or off), must send 4 bytes.
+	  mouse->force_update = true;
+	  push_update(mouse, true); // Every time MMB changes (on or off), must send 4 bytes.
 	}
 	break;
     }
@@ -180,17 +180,17 @@ static inline void process_mouse_report(mouse_state_t *mouse, struct input_event
     switch(ev->code) {
       case REL_X:
 	mouse->x += ev->value;
-	mouse->x = clampi(mouse->x, -127, 127);
+	mouse->x = clampi(mouse->x, -36862, 36862);
 	break;
       case REL_Y:
 	mouse->y += ev->value;
-	mouse->y = clampi(mouse->y, -127, 127);
+	mouse->y = clampi(mouse->y, -36862, 36862);
 	break;
       case REL_WHEEL:
 	if(options->wheel) {
 	  mouse->wheel += ev->value;
-	  mouse->wheel = clampi(mouse->wheel, -15, 15);
-	  push_update(mouse, 1);
+	  mouse->wheel = clampi(mouse->wheel, -63, 63);
+	  push_update(mouse, true);
 	}
 	break;
     }
@@ -255,6 +255,8 @@ int main(int argc, char **argv) {
   // Aggregate movements before sending
   struct timespec time_now, time_target, time_diff;
   mouse_state_t mouse;
+  mouse.pc_state = CTS_UNINIT;
+  mouse.sensitivity = 1.0;
   reset_mouse_state(&mouse); // Set packet memory to initial state
 
   int i; // Allocate outside main loop instead of allocating every time.
@@ -301,16 +303,18 @@ int main(int argc, char **argv) {
     if (libevdev_next_event(mouse_dev, LIBEVDEV_READ_FLAG_NORMAL, &ev) == LIBEVDEV_READ_STATUS_SUCCESS) {
 
       process_mouse_report(&mouse, &ev, options);
+      runtime_settings(&mouse);
 
       /*** Send mouse state updates clamped to baud max rate ***/ 
       clock_gettime(CLOCK_MONOTONIC, &time_now);
       timespec_diff(&time_target, &time_now, &time_diff);
 
       if((time_diff.tv_sec < 0 && mouse.update > -1) || mouse.force_update) {
-
+	input_sensitivity(&mouse);
         update_mouse_state(&mouse);
-
+         
 	// Send updates
+	if(options->debug) { fprintf(stderr, "Sensitivity: %f\n", mouse.sensitivity); }
         for(i=0; i <= mouse.update; i++) {
           if(options->debug) {
 	    fprintf(stderr, "Time: %d.%d\n", (int)time_diff.tv_sec, (int)time_diff.tv_nsec);

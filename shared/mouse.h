@@ -59,6 +59,10 @@ bool update_mouse_state(mouse_state_t *mouse);
 
 void reset_mouse_state(mouse_state_t *mouse);
 
+void runtime_settings(mouse_state_t *mouse);
+
+void input_sensitivity(mouse_state_t *mouse);
+
 void push_update(mouse_state_t *mouse, bool full_packet);
 
 #endif // MOUSE_H_
