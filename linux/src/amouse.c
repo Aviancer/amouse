@@ -277,14 +277,14 @@ int main(int argc, char **argv) {
   /*** Main loop ***/
 
   while(1) {
-    bool cts_pin = get_pin(fd, TIOCM_CTS | TIOCM_DSR); 
+    bool pc_pins = get_pin(fd, TIOCM_CTS | TIOCM_DSR); 
 
-    if(!cts_pin) { // Computers RTS & DTR low 
+    if(!pc_pins) { // Computers RTS & DTR low 
       mouse.pc_state = CTS_LOW_INIT;
     }
 
     // Mouse initiaizing request detected
-    if(cts_pin && mouse.pc_state == CTS_LOW_INIT) {
+    if(pc_pins && mouse.pc_state == CTS_LOW_INIT) {
       if(options->debug) {
 	aprint("Computers RTS & DTR pins set low, identifying as mouse.");
       }
