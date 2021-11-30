@@ -269,25 +269,27 @@ int main(int argc, char **argv) {
   // Ident immediately on program start up.
   if(options->immediate) {
     aprint("Performing immediate identification as mouse.");
-    mouse_ident(fd, options->wheel, options->immediate);
+    mouse_ident(fd, options->wheel);
+    mouse.pc_state = CTS_TOGGLED; // Bypass CTS detection, send events straight away.
   }
 
 
   /*** Main loop ***/
 
   while(1) {
-    mouse.update = -1;
+    bool cts_pin = get_pin(fd, TIOCM_CTS | TIOCM_DSR); 
 
-    /* Check if mouse driver trying to initialize */
-    /* TODO: This will also trigger if the PC is not powered */
-    if((get_pin(fd, TIOCM_CTS | TIOCM_DSR) == 0) && (!options->immediate)) { // Computers RTS & DTR low
+    if(!cts_pin) { // Computers RTS & DTR low 
+      mouse.pc_state = CTS_LOW_INIT;
+    }
+
+    // Mouse initiaizing request detected
+    if(cts_pin && mouse.pc_state == CTS_LOW_INIT) {
       if(options->debug) {
 	aprint("Computers RTS & DTR pins set low, identifying as mouse.");
       }
-
-      mouse_ident(fd, options->wheel, options->immediate);
-      aprint("Mouse initialized. Good to go!");
-
+      mouse.pc_state = CTS_TOGGLED;
+      mouse_ident(fd, options->wheel);
       /* Negotiate 2400 baud rate 
        *
        * Microsoft protocols may be limited to only 1200 baud.
@@ -298,9 +300,11 @@ int main(int argc, char **argv) {
       /* setup_tty(fd, &tty, (speed_t)B2400);*/
       //serial_write(fd, "*o", 2); 
       //usleep(100);
+      aprint("Mouse initialized. Good to go!");
     }
 
-    if (libevdev_next_event(mouse_dev, LIBEVDEV_READ_FLAG_NORMAL, &ev) == LIBEVDEV_READ_STATUS_SUCCESS) {
+    if((mouse.pc_state == CTS_TOGGLED) && 
+      (libevdev_next_event(mouse_dev, LIBEVDEV_READ_FLAG_NORMAL, &ev) == LIBEVDEV_READ_STATUS_SUCCESS)) {
 
       process_mouse_report(&mouse, &ev, options);
       runtime_settings(&mouse);
@@ -331,9 +335,8 @@ int main(int argc, char **argv) {
 
 	reset_mouse_state(&mouse);
       }
- 
-      usleep(1);
     }
+    usleep(1);
   }
 
   disable_pin(fd, TIOCM_RTS | TIOCM_DTR);

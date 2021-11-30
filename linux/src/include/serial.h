@@ -28,7 +28,7 @@ int setup_tty(int fd, speed_t baudrate);
 
 void wait_pin_state(int fd, int flag, int desired_state);
 
-void mouse_ident(int fd, int wheel, int immediate);
+void mouse_ident(int fd, int wheel);
 
 void timespec_diff(struct timespec *ts1, struct timespec *ts2, struct timespec *result);
 
