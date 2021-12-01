@@ -238,9 +238,10 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Serial device file open() failed: %d: %s\n", errno, strerror(errno));
     exit(-1);
   }
-  else {
-    fcntl(fd, F_SETFL, 0); // Reset flags on serial fd, should maybe F_GETFL instead and mod state.
-  }
+  // TODO: I don't think this is needed.
+  //else {
+    //fcntl(fd, F_SETFL, 0); // Reset flags on serial fd, should maybe F_GETFL instead and mod state.
+  //}
 
   if (tcgetattr(fd, &old_tty) != 0) {
     fprintf(stderr, "tcgetattr() failed: %d: %s\n", errno, strerror(errno));
@@ -251,6 +252,7 @@ int main(int argc, char **argv) {
   enable_pin(fd, TIOCM_RTS | TIOCM_DTR);
 
   fcntl (0, F_SETFL, O_NONBLOCK); // Nonblock 0=stdin
+  setvbuf(stdout, NULL, _IONBF, 0); // DEBUG: Unbuffer stdout
   
   // Aggregate movements before sending
   struct timespec time_now, time_target, time_diff;
@@ -276,8 +278,18 @@ int main(int argc, char **argv) {
 
   /*** Main loop ***/
 
+  uint8_t *buffer; // DEBUG
+  buffer = (uint8_t *)malloc(sizeof(uint8_t)*1024);
+
   while(1) {
-    bool pc_pins = get_pin(fd, TIOCM_CTS | TIOCM_DSR); 
+    bool pc_pins = get_pin(fd, TIOCM_CTS | TIOCM_DSR);
+
+    // DEBUG
+    int len = serial_read(fd, buffer, 1024);
+    if(len > 0) {
+      printf("%.*s", len, buffer);
+      serial_write(fd, buffer, sizeof(uint8_t)*len);
+    }
 
     if(!pc_pins) { // Computers RTS & DTR low 
       mouse.pc_state = CTS_LOW_INIT;
@@ -325,7 +337,8 @@ int main(int argc, char **argv) {
             fprintf(stderr, "Sent(ev:%d) %d: %x\n", ev.code, i, mouse.state[i]);
 	    fprintf(stderr, "Mouse state(%d): %s\n", i, byte_to_bitstring(mouse.state[i]));
 	  }
-          write(fd, &mouse.state[i], sizeof(uint8_t));
+          //write(fd, &mouse.state[i], sizeof(uint8_t));
+	  serial_write(fd, &mouse.state[i], sizeof(uint8_t));
         }
 	if(options->debug) { printf("\n"); }
 

@@ -18,6 +18,8 @@
 
 int serial_write(int fd, uint8_t *buffer, int size);
 
+int serial_read(int fd, uint8_t *buffer, int size);
+
 int get_pin(int fd, int flag);
 
 int enable_pin(int fd, int flag);
