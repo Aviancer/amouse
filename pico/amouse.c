@@ -66,7 +66,7 @@ static uint32_t txtimer_target; // Serial transmit timer target time
 // Aggregate movements before sending
 CFG_TUSB_MEM_SECTION static hid_mouse_report_t usb_mouse_report;
 CFG_TUSB_MEM_SECTION static hid_mouse_report_t usb_mouse_report_prev;
-CFG_TUSB_MEM_SECTION static char serial_in_buffer[64] = { 0 }; //NEW
+CFG_TUSB_MEM_SECTION static char serial_in_buffer[64] = { 0 };
 
 // DEBUG
 const uint LED_PIN = PICO_DEFAULT_LED_PIN;
@@ -85,7 +85,6 @@ void queue_tx(mouse_state_t *mouse) {
 
 /*** USB comms ***/
 
-//static void process_mouse_report(hid_mouse_report_t const * report);
 static inline void process_mouse_report(mouse_state_t *mouse, hid_mouse_report_t const *p_report);
 static void process_generic_report(uint8_t dev_addr, uint8_t instance, uint8_t const* report, uint16_t len);
 
@@ -109,34 +108,34 @@ void tuh_cdc_xfer_isr(uint8_t dev_addr, xfer_result_t event, cdc_pipeid_t pipe_i
 // therefore report_desc = NULL, desc_len = 0
 void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_report, uint16_t desc_len)
 {
-  printf("HID device address = %d, instance = %d is mounted\r\n", dev_addr, instance);
+  //printf("HID device address = %d, instance = %d is mounted\r\n", dev_addr, instance);
 
   // Interface protocol (hid_interface_protocol_enum_t)
   const char* protocol_str[] = { "None", "Keyboard", "Mouse" };
   uint8_t const itf_protocol = tuh_hid_interface_protocol(dev_addr, instance);
 
-  printf("HID Interface Protocol = %s\r\n", protocol_str[itf_protocol]);
+  //printf("HID Interface Protocol = %s\r\n", protocol_str[itf_protocol]);
 
   // By default host stack will use activate boot protocol on supported interface.
   // Therefore for this simple example, we only need to parse generic report descriptor (with built-in parser)
   if ( itf_protocol == HID_ITF_PROTOCOL_NONE )
   {
     hid_info[instance].report_count = tuh_hid_parse_report_descriptor(hid_info[instance].report_info, MAX_HID_REPORT, desc_report, desc_len);
-    printf("HID has %u reports \r\n", hid_info[instance].report_count);
+    //printf("HID has %u reports \r\n", hid_info[instance].report_count);
   }
 
   // request to receive report
   // tuh_hid_report_received_cb() will be invoked when report is available
   if ( !tuh_hid_receive_report(dev_addr, instance) )
   {
-    printf("Error: cannot request to receive report\r\n");
+    //printf("Error: cannot request to receive report\r\n");
   }
 }
 
 // Invoked when device with hid interface is un-mounted
 void tuh_hid_umount_cb(uint8_t dev_addr, uint8_t instance)
 {
-  printf("HID device address = %d, instance = %d is unmounted\r\n", dev_addr, instance);
+  //printf("HID device address = %d, instance = %d is unmounted\r\n", dev_addr, instance);
 }
 
 // Invoked when received report from device via interrupt endpoint
@@ -147,17 +146,17 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
   switch (itf_protocol)
   {
     case HID_ITF_PROTOCOL_KEYBOARD:
-      TU_LOG2("HID receive boot keyboard report\r\n");
+      //TU_LOG2("HID receive boot keyboard report\r\n");
       //process_kbd_report( (hid_keyboard_report_t const*) report );
     break;
 
     case HID_ITF_PROTOCOL_MOUSE:
-      TU_LOG2("HID receive boot mouse report\r\n");
+      //TU_LOG2("HID receive boot mouse report\r\n");
       process_mouse_report(&mouse, (hid_mouse_report_t const*) report );
     break;
 
     default:
-      TU_LOG2("HID receive generic report\r\n");
+      //TU_LOG2("HID receive generic report\r\n");
       // Generic report requires matching ReportID and contents with previous parsed report info
       process_generic_report(dev_addr, instance, report, len);
     break;
@@ -166,7 +165,7 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
   // continue to request to receive report
   if ( !tuh_hid_receive_report(dev_addr, instance) )
   {
-    printf("Error: cannot request to receive report\r\n");
+    //printf("Error: cannot request to receive report\r\n");
   }
 }
 
@@ -206,7 +205,7 @@ static void process_generic_report(uint8_t dev_addr, uint8_t instance, uint8_t c
 
   if (!rpt_info)
   {
-    printf("Couldn't find the report info for this report !\r\n");
+    //printf("Couldn't find the report info for this report !\r\n");
     return;
   }
 
@@ -222,13 +221,13 @@ static void process_generic_report(uint8_t dev_addr, uint8_t instance, uint8_t c
     switch (rpt_info->usage)
     {
       case HID_USAGE_DESKTOP_KEYBOARD:
-        TU_LOG1("HID receive keyboard report\r\n");
+        //TU_LOG1("HID receive keyboard report\r\n");
         // Assume keyboard follow boot report layout
         //process_kbd_report( (hid_keyboard_report_t const*) report );
       break;
 
       case HID_USAGE_DESKTOP_MOUSE:
-        TU_LOG1("HID receive mouse report\r\n");
+        //TU_LOG1("HID receive mouse report\r\n");
         // Assume mouse follow boot report layout
         process_mouse_report(&mouse, (hid_mouse_report_t const*) report );
       break;
@@ -239,7 +238,7 @@ static void process_generic_report(uint8_t dev_addr, uint8_t instance, uint8_t c
 }
 
 
-
+/*** Mouse specific USB handling ***/
 
 int test_mouse_button(uint8_t buttons_state, uint8_t button) {
   if(buttons_state & button) { return 1; }
@@ -333,7 +332,6 @@ int main() {
       gpio_put(LED_PIN, true);
 
       tuh_task(); // tinyusb host task
-      //hid_task(); // hid/mouse handling
  
       if(time_reached(txtimer_target) || mouse.force_update) {
         runtime_settings(&mouse);
