@@ -107,14 +107,15 @@ void push_update(mouse_state_t *mouse, bool full_packet) {
 }
 
 void console(int fd) {
-  uint8_t *cli_buffer;
+  /*uint8_t *cli_buffer;
+  // NOTE: Apparently we should avoid calloc/malloc on embedded systems.. should just allocate a memory section permanently for it?
   cli_buffer = (uint8_t *)calloc(sizeof(uint8_t), 513);
 
   serial_write(fd, (uint8_t*)"amouse> ", 8); 
 
   while(1) {
     int cli_buffer_len = serial_read(fd, cli_buffer, 512);
-    serial_write(fd, buffer, sizeof(uint8_t)*cli_buffer_len); 
+    serial_write(fd, cli_buffer, sizeof(uint8_t)*cli_buffer_len); 
   }
-  free(cli_buffer);
+  free(cli_buffer);*/
 }
