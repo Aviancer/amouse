@@ -1,4 +1,4 @@
-/* 
+/*
  * Anachro Mouse, a usb to serial mouse adaptor. Copyright (C) 2021 Aviancer <oss+amouse@skyvian.me>
  *
  * This library is free software; you can redistribute it and/or modify it under the terms of the 
@@ -11,31 +11,31 @@
  *
  * You should have received a copy of the GNU Lesser General Public License along with this library; 
  * if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ *
 */
 
-#ifndef SERIAL_H_
-#define SERIAL_H_
+#ifndef USB_H_
+#define USB_H_
 
-#include <termios.h> // POSIX terminal control defs
+#include "bsp/board.h"
+#include "tusb.h"
 
-int serial_write(int fd, uint8_t *buffer, int size);
+#define MAX_HID_REPORT  4
+// Each HID instance can has multiple reports
+static struct
+{
+  uint8_t report_count;
+  tuh_hid_report_info_t report_info[MAX_HID_REPORT];
+}hid_info[CFG_TUH_HID];
 
-int serial_read(int fd, uint8_t *buffer, int size);
+void tuh_cdc_xfer_isr(uint8_t dev_addr, xfer_result_t event, cdc_pipeid_t pipe_id, uint32_t xferred_bytes);
 
-int get_pin(int fd, int flag);
+void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_report, uint16_t desc_len);
 
-int enable_pin(int fd, int flag);
+void tuh_hid_umount_cb(uint8_t dev_addr, uint8_t instance);
 
-int disable_pin(int fd, int flag);
+void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* report, uint16_t len);
 
-int setup_tty(int fd, speed_t baudrate);
+static void process_generic_report(uint8_t dev_addr, uint8_t instance, uint8_t const* report, uint16_t len);
 
-void wait_pin_state(int fd, int flag, int desired_state);
-
-void mouse_ident(int fd, int wheel);
-
-void timespec_diff(struct timespec *ts1, struct timespec *ts2, struct timespec *result);
-
-struct timespec get_target_time(uint32_t delay);
-
-#endif // SERIAL_H_
+#endif // USB_H_

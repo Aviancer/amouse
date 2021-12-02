@@ -15,7 +15,6 @@
 
 #include <stdio.h> // Standard input / output
 #include <stdlib.h> // Standard input / output
-#include <termios.h> // POSIX terminal control defs
 #include <unistd.h> // UNIX standard function defs, close()
 #include <errno.h> // Error number definitions
 #include <string.h> // strerror()
@@ -33,12 +32,21 @@ uint8_t pkt_intellimouse_intro[] = "\x4D\x5A";
 
 /* Write to serial out with enforced order, otherwise we may have bytes flipped */
 int serial_write(int fd, uint8_t *buffer, int size) { 
-  int written=0;
-  for(int i=0; i < size; i++) {
-    write(fd, &buffer[i], 1);
-    written++;
+  int bytes=0;
+  for(; bytes < size; bytes++) {
+    write(fd, &buffer[bytes], 1);
   }  
-  return written;
+  return bytes;
+}
+
+// Non-blocking read
+int serial_read(int fd, uint8_t *buffer, int size) {
+  int bytes=0;
+  for(int i=0; i <= size; i++) {
+    if(read(fd, &buffer[bytes], 1) > 0) { bytes++; }
+    else { break; }
+  }
+  return bytes;
 }
 
 int get_pin(int fd, int flag) {
@@ -94,6 +102,7 @@ int setup_tty(int fd, speed_t baudrate) {
     printf("tcflush() failed: %d: %s\n", errno, strerror(errno));
     return -1;
   }
+
   return 0;
 }
 
@@ -106,13 +115,13 @@ void wait_pin_state(int fd, int flag, int desired_state) {
   }
 }
 
-void mouse_ident(int fd, int wheel_enabled, int immediate) {
+void mouse_ident(int fd, int wheel_enabled) {
   /*** Microsoft Mouse proto negotiation ***/
-  if(!immediate) {
+  /*if(!immediate) {
     wait_pin_state(fd, TIOCM_CTS | TIOCM_DSR, 0); // Computers RTS & DTR
     wait_pin_state(fd, TIOCM_CTS, 1); 
     usleep(14); // Simulate real mouse start up.
-  }
+  }*/
   /* Byte1:Always M
    * Byte2:[None]=Microsoft 3=Logitech Z=MicrosoftWheel  */
   //uint8_t logitech[] = "\x4D\x33";

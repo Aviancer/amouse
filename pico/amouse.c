@@ -23,6 +23,7 @@
 #include "pico/stdlib.h"
 
 #include "include/serial.h"
+#include "include/usb.h"
 #include "../shared/utils.h"
 #include "../shared/mouse.h"
 
@@ -55,7 +56,7 @@ mouse_state_t mouse; // int values default to 0
 static uint32_t txtimer_target; // Serial transmit timer target time
 
 // Aggregate movements before sending
-CFG_TUSB_MEM_SECTION static hid_mouse_report_t usb_mouse_report;
+//CFG_TUSB_MEM_SECTION static hid_mouse_report_t usb_mouse_report;
 CFG_TUSB_MEM_SECTION static hid_mouse_report_t usb_mouse_report_prev;
 
 // DEBUG
@@ -73,15 +74,7 @@ void queue_tx(mouse_state_t *mouse) {
 }
 
 
-/*** USB comms ***/
-
-void tuh_hid_mouse_mounted_cb(uint8_t dev_addr) {
-  // printf("A Mouse device (address %d) is mounted\r\n", dev_addr);
-}
-
-void tuh_hid_mouse_unmounted_cb(uint8_t dev_addr) {
-  // printf("A Mouse device (address %d) is unmounted\r\n", dev_addr);
-}
+/*** Mouse specific USB handling ***/
 
 int test_mouse_button(uint8_t buttons_state, uint8_t button) {
   if(buttons_state & button) { return 1; }
@@ -127,22 +120,10 @@ static inline void process_mouse_report(mouse_state_t *mouse, hid_mouse_report_t
   usb_mouse_report_prev = *p_report;
 }
 
-// invoked ISR context
-void tuh_hid_mouse_isr(uint8_t dev_addr, xfer_result_t event) {
-  (void) dev_addr;
-  (void) event;
-}
-
-// Process USB HID events.
-void hid_task(void) {
-  uint8_t const addr = 1;
-
-  if(tuh_hid_mouse_is_mounted(addr)) {
-    if(!tuh_hid_mouse_is_busy(addr)) {
-      tuh_hid_mouse_get_report(addr, &usb_mouse_report);
-      process_mouse_report(&mouse, &usb_mouse_report);
-    }
-  }
+// External interface for delivering mouse reports to process_mouse_report()
+// Allows keeping static context within amouse.c while tinyusb handling can be shifted to usb.c
+extern void collect_mouse_report(hid_mouse_report_t* p_report) {
+  process_mouse_report(&mouse, p_report); // Passes full context with mouse and report without having to make them external/non-static.
 }
 
 
@@ -150,7 +131,7 @@ void hid_task(void) {
 
 int main() {
   // Initialize serial parameters 
-  mouse_serial_init(uart0); 
+  mouse_serial_init(0); // uart0
 
   // Set up initial state 
   //enable_pins(UART_RTS_BIT | UART_DTR_BIT);
@@ -184,7 +165,7 @@ int main() {
     // ### Mouse initiaizing request detected
     if(!cts_pin && mouse.pc_state == CTS_LOW_INIT) {
       mouse.pc_state = CTS_TOGGLED;
-      mouse_ident(uart0, options.wheel);
+      mouse_ident(0, options.wheel);
     }
 
     /*** Mouse update loop ***/
@@ -193,7 +174,6 @@ int main() {
       gpio_put(LED_PIN, true);
 
       tuh_task(); // tinyusb host task
-      hid_task(); // hid/mouse handling
  
       if(time_reached(txtimer_target) || mouse.force_update) {
         runtime_settings(&mouse);
@@ -201,7 +181,7 @@ int main() {
 	update_mouse_state(&mouse);
 
 	queue_tx(&mouse); // Update next serial timing
-        serial_write(uart0, mouse.state, mouse.update);
+        serial_write(0, mouse.state, mouse.update);
         reset_mouse_state(&mouse);
       }
 
