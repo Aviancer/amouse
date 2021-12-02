@@ -16,6 +16,8 @@
 #ifndef SERIAL_H_
 #define SERIAL_H_
 
+#include <termios.h> // POSIX terminal control defs
+
 int serial_write(int fd, uint8_t *buffer, int size);
 
 int serial_read(int fd, uint8_t *buffer, int size);

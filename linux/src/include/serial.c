@@ -15,7 +15,6 @@
 
 #include <stdio.h> // Standard input / output
 #include <stdlib.h> // Standard input / output
-#include <termios.h> // POSIX terminal control defs
 #include <unistd.h> // UNIX standard function defs, close()
 #include <errno.h> // Error number definitions
 #include <string.h> // strerror()
