@@ -41,9 +41,13 @@ enum UART_BITS {
   UART_RTS_BIT = 6
 };
 
-void mouse_serial_init(uart_inst_t* uart);
+uart_inst_t* get_uart(int uart_id);
 
-int serial_write(uart_inst_t* uart, uint8_t *buffer, int size);
+void mouse_serial_init(int uart_id);
+
+int serial_write(int uart_id, uint8_t *buffer, int size);
+
+int serial_read(int uart_id, uint8_t *buffer, int size);
 
 int get_pins(int flag);
 
@@ -53,6 +57,6 @@ void disable_pins(int flag);
 
 void wait_pin_state(int flag, int desired_state);
 
-void mouse_ident(uart_inst_t* uart, int wheel_enabled);
+void mouse_ident(int uart_id, bool wheel_enabled);
 
 #endif // SERIAL_H_

@@ -16,7 +16,11 @@
 #ifndef SERIAL_H_
 #define SERIAL_H_
 
+#include <termios.h> // POSIX terminal control defs
+
 int serial_write(int fd, uint8_t *buffer, int size);
+
+int serial_read(int fd, uint8_t *buffer, int size);
 
 int get_pin(int fd, int flag);
 
@@ -28,7 +32,7 @@ int setup_tty(int fd, speed_t baudrate);
 
 void wait_pin_state(int fd, int flag, int desired_state);
 
-void mouse_ident(int fd, int wheel, int immediate);
+void mouse_ident(int fd, int wheel);
 
 void timespec_diff(struct timespec *ts1, struct timespec *ts2, struct timespec *result);
 

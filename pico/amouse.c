@@ -290,7 +290,7 @@ static inline void process_mouse_report(mouse_state_t *mouse, hid_mouse_report_t
 
 int main() {
   // Initialize serial parameters 
-  mouse_serial_init(uart0); 
+  mouse_serial_init(0); 
 
   // Set up initial state 
   //enable_pins(UART_RTS_BIT | UART_DTR_BIT);
@@ -324,7 +324,7 @@ int main() {
     // ### Mouse initiaizing request detected
     if(!cts_pin && mouse.pc_state == CTS_LOW_INIT) {
       mouse.pc_state = CTS_TOGGLED;
-      mouse_ident(uart0, options.wheel);
+      mouse_ident(0, options.wheel);
     }
 
     /*** Mouse update loop ***/
@@ -341,7 +341,7 @@ int main() {
 	update_mouse_state(&mouse);
 
 	queue_tx(&mouse); // Update next serial timing
-        serial_write(uart0, mouse.state, mouse.update);
+        serial_write(0, mouse.state, mouse.update);
         reset_mouse_state(&mouse);
       }
 

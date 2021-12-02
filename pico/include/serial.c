@@ -32,7 +32,16 @@ uint8_t pkt_intellimouse_intro[] = {0x4D,0x5A};
 
 /*** Serial comms ***/
 
-void mouse_serial_init(uart_inst_t* uart) {
+// Convert fd style number to uart 
+uart_inst_t* get_uart(int uart_id) {
+  if(uart_id == 0) { return uart0; }
+  else if(uart_id == 1) { return uart1; }
+  else { return NULL; }
+}
+
+void mouse_serial_init(int uart_id) {
+  uart_inst_t* uart = get_uart(uart_id);
+  if(uart != NULL) {
     // Set baud for serial device 
     uart_init(uart, BAUD_RATE);
 
@@ -48,16 +57,36 @@ void mouse_serial_init(uart_inst_t* uart) {
 
     // Having the FIFOs on causes lag with 4 byte packets, this ensures better flow.
     uart_set_fifo_enabled(uart, false);
+  }
 }
 
 // TODO: Size does not always match if mixing null terminated and not packets.
-int serial_write(uart_inst_t* uart, uint8_t *buffer, int size) { 
-  int written=0;
-  for(int i=0; i <= size; i++) {
-    uart_putc_raw(uart, buffer[i]); 
-    written++;
-  } 
-  return written;
+// Does not currently confirm that TX FIFO is writable.
+int serial_write(int uart_id, uint8_t *buffer, int size) { 
+  uart_inst_t* uart = get_uart(uart_id);
+  int bytes=0;
+  if(uart != NULL) {
+    for(; bytes <= size; bytes++) {
+      uart_putc_raw(uart, buffer[bytes]); 
+    } 
+  }
+  return bytes;
+}
+
+// Non-blocking read
+int serial_read(int uart_id, uint8_t *buffer, int size) { 
+  uart_inst_t* uart = get_uart(uart_id);
+  int bytes=0;
+  if(uart != NULL) {
+    for(int i=0; i <= size; i++) {
+      if(uart_is_readable(uart)) {
+	buffer[bytes] = uart_getc(uart);
+	bytes++;
+      }
+      else { break; }
+    } 
+  }
+  return bytes;
 }
 
 int get_pins(int flag) {
@@ -94,7 +123,7 @@ void wait_pin_state(int flag, int desired_state) {
   }
 }
 
-void mouse_ident(uart_inst_t* uart, int wheel_enabled) {
+void mouse_ident(int uart_id, bool wheel_enabled) {
   /*** Microsoft Mouse proto negotiation ***/
  
   sleep_us(14); 
@@ -107,10 +136,10 @@ void mouse_ident(uart_inst_t* uart, int wheel_enabled) {
   //uint8_t pkt_intellimouse_intro[] = "\x4D\x5A"; // MZ
 
   if(wheel_enabled) {
-    serial_write(uart, pkt_intellimouse_intro, 2); // 2 byte intro is sufficient
+    serial_write(uart_id, pkt_intellimouse_intro, 2); // 2 byte intro is sufficient
   }
   else {
-    serial_write(uart, pkt_intellimouse_intro, 1); // M for basic Microsoft proto. 
+    serial_write(uart_id, pkt_intellimouse_intro, 1); // M for basic Microsoft proto. 
   }
 
   // sleep_us(63); // Simulate mouse init delay
