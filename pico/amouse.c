@@ -22,6 +22,7 @@
 #include "stdbool.h"
 #include "pico/stdlib.h"
 
+#include "include/version.h"
 #include "include/serial.h"
 #include "include/usb.h"
 #include "../shared/utils.h"
