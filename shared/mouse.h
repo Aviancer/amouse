@@ -55,6 +55,8 @@ enum PC_INIT_STATES {
 
 /* Functions */
 
+void console(int fd);
+
 bool update_mouse_state(mouse_state_t *mouse);
 
 void reset_mouse_state(mouse_state_t *mouse);

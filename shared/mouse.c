@@ -14,12 +14,16 @@
  *
 */
 
+/* mouse.c: Architecture independent mouse logic */
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 
 #ifdef __linux__
 #include <stdlib.h>
+#include <unistd.h> // TODO: replace with better than usleep()
+#include <stdio.h> // DEBUG
 #include "../linux/src/include/serial.h"
 #else 
 #include "pico/stdlib.h"
@@ -27,10 +31,11 @@
 #endif 
 
 #include "mouse.h"
-//#include "serial.h"
 #include "utils.h"
 
 /*** Shared definitions ***/
+
+#define CMD_BUFFER_LEN 512
 
 uint8_t init_mouse_state[] = "\x40\x00\x00\x00"; // Our basic mouse packet (We send 3 or 4 bytes of it)
 
@@ -107,15 +112,49 @@ void push_update(mouse_state_t *mouse, bool full_packet) {
 }
 
 void console(int fd) {
-  /*uint8_t *cli_buffer;
-  // NOTE: Apparently we should avoid calloc/malloc on embedded systems.. should just allocate a memory section permanently for it?
-  cli_buffer = (uint8_t *)calloc(sizeof(uint8_t), 513);
+  // We should avoid calloc/malloc on embedded systems.
+  uint8_t cmd_buffer[CMD_BUFFER_LEN] = {0};
+  uint write_pos = 0;
+  uint read_len= 0;
 
   serial_write(fd, (uint8_t*)"amouse> ", 8); 
 
   while(1) {
-    int cli_buffer_len = serial_read(fd, cli_buffer, 512);
-    serial_write(fd, cli_buffer, sizeof(uint8_t)*cli_buffer_len); 
+    write_pos += read_len;
+    if(write_pos >= CMD_BUFFER_LEN) { 
+      printf("Contents: #%.*s#\n", CMD_BUFFER_LEN, cmd_buffer);
+      serial_write(fd, cmd_buffer, write_pos); // DEBUG
+      write_pos = 0;
+      usleep(1000000);
+    }
+    // Keep reading to buffer until buffer ends, shrink each allowed read length as more data is added.
+    read_len = serial_read(fd, cmd_buffer + write_pos, (CMD_BUFFER_LEN - write_pos));
+
+    //serial_write(fd, cmd_buffer + write_pos, sizeof(uint8_t)*read_len); 
+    printf("%.*s\n", write_pos, cmd_buffer); // DEBUG
+    usleep(50000); // TODO: Not arch independent.
+
+    char* ptr; 
+    ptr = strpbrk((char*)cmd_buffer, "\r\n");
+    if(ptr) { 
+      // TODO: Need replacement for strtok, not a thread/lib safe function.
+      char* ptr = strtok((char*)cmd_buffer, " \r\n");
+      while(ptr) {
+	printf("Got %s\n", ptr); // DEBUG
+	usleep(1000000);
+
+	if(!strcmp(ptr, "amouse")) {
+	  printf("Matched!\n"); 
+	  usleep(1000000);
+	} 
+
+	read_len = write_pos = 0;
+	ptr = strtok(NULL, " \r\n");
+      }
+      memset(cmd_buffer, 0, CMD_BUFFER_LEN);
+    }
+
   }
-  free(cli_buffer);*/
+
+  //free(cli_buffer);
 }

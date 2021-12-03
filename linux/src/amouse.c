@@ -280,6 +280,8 @@ int main(int argc, char **argv) {
   while(1) {
     bool pc_pins = get_pin(fd, TIOCM_CTS | TIOCM_DSR);
 
+    console(fd); // DEBUG
+
     // DEBUG
     /* int len = serial_read(fd, buffer, 1024);
     if(len > 0) {

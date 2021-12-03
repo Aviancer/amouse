@@ -57,7 +57,6 @@ mouse_state_t mouse; // int values default to 0
 static uint32_t txtimer_target; // Serial transmit timer target time
 
 // Aggregate movements before sending
-//CFG_TUSB_MEM_SECTION static hid_mouse_report_t usb_mouse_report;
 CFG_TUSB_MEM_SECTION static hid_mouse_report_t usb_mouse_report_prev;
 
 // DEBUG
