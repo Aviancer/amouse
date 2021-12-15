@@ -36,11 +36,6 @@
 
 /*** Program parameters ***/ 
 
-char title[] = 
-R"#(  __ _   _ __  ___ _  _ ___ ___ 
- / _` | | '  \/ _ \ || (_-</ -_)
- \__,_| |_|_|_\___/\_,_/__/\___=====_____)#";
-
 // Struct for storing pointers to dynamically allocated memory containing options.
 struct opts {
   char *mousepath; // Pointers, memory is dynamically allocated.
@@ -55,7 +50,7 @@ struct opts {
 /*** Linux console ***/
 
 void showhelp(char *argv[]) {
-  printf("%s\n\n", title);
+  printf("%s\n\n", amouse_title);
   printf("Anachro Mouse v%d.%d.%d, a usb to serial mouse adaptor.\n" \
          "Usage: %s -m <mouse_input> -s <serial_output>\n\n" \
          "  -m <File> to read mouse input from (/dev/input/*)\n" \
@@ -261,7 +256,7 @@ int main(int argc, char **argv) {
 
   time_target = get_target_time(NS_SERIALDELAY_3B);
   
-  printf("%s\n\n", title);
+  printf("%s\n\n", amouse_title);
   aprint("Waiting for PC to initialize mouse driver..");
 
   // Ident immediately on program start up.

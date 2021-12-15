@@ -24,9 +24,11 @@
 #include <stdlib.h>
 #include <unistd.h> // TODO: replace with better than usleep()
 #include <stdio.h> // DEBUG
+#include "../linux/src/include/version.h"
 #include "../linux/src/include/serial.h"
 #else 
 #include "pico/stdlib.h"
+#include "../pico/include/version.h"
 #include "../pico/include/serial.h"
 #endif 
 
@@ -37,7 +39,27 @@
 
 #define CMD_BUFFER_LEN 512
 
+const char amouse_title[] =
+R"#( __ _   _ __  ___ _  _ ___ ___ 
+/ _` | | '  \/ _ \ || (_-</ -_)
+\__,_| |_|_|_\___/\_,_/__/\___=====_____)#";
+
+const char amouse_menu[] =
+R"#(1) Help/Usage
+2) Show current settings
+3) Set mouse wheel on/off
+4) Set sensitivity (1-20)
+5) Exit settings/Resume adapter
+0) Read or write settings (Flash)
+)#";
+
 uint8_t init_mouse_state[] = "\x40\x00\x00\x00"; // Our basic mouse packet (We send 3 or 4 bytes of it)
+
+
+/*** Global data / BSS (Avoid stack) ***/ 
+
+// We should avoid calloc/malloc on embedded systems.
+uint8_t cmd_buffer[CMD_BUFFER_LEN + 1] = {0};
 
 
 /*** Shared mouse functions ***/
@@ -112,12 +134,16 @@ void push_update(mouse_state_t *mouse, bool full_packet) {
 }
 
 void console(int fd) {
-  // We should avoid calloc/malloc on embedded systems.
-  uint8_t cmd_buffer[CMD_BUFFER_LEN] = {0};
+
   uint write_pos = 0;
   uint read_len= 0;
 
-  serial_write(fd, (uint8_t*)"amouse> ", 8); 
+  uint arg1, arg2;
+
+  serial_write_terminal(fd, (uint8_t*)amouse_title, sizeof(amouse_title));
+  serial_write_terminal(fd, (uint8_t*)"\n", 1);
+  serial_write_terminal(fd, (uint8_t*)amouse_menu, sizeof(amouse_menu));
+  serial_write_terminal(fd, (uint8_t*)"amouse> ", 8); 
 
   while(1) {
     write_pos += read_len;
@@ -129,32 +155,32 @@ void console(int fd) {
     }
     // Keep reading to buffer until buffer ends, shrink each allowed read length as more data is added.
     read_len = serial_read(fd, cmd_buffer + write_pos, (CMD_BUFFER_LEN - write_pos));
+    serial_write_terminal(fd, cmd_buffer + write_pos, sizeof(uint8_t) * read_len); // Echo to terminal
 
-    //serial_write(fd, cmd_buffer + write_pos, sizeof(uint8_t)*read_len); 
     printf("%.*s\n", write_pos, cmd_buffer); // DEBUG
     usleep(50000); // TODO: Not arch independent.
 
-    char* ptr; 
-    ptr = strpbrk((char*)cmd_buffer, "\r\n");
-    if(ptr) { 
-      // TODO: Need replacement for strtok, not a thread/lib safe function.
-      char* ptr = strtok((char*)cmd_buffer, " \r\n");
-      while(ptr) {
-	printf("Got %s\n", ptr); // DEBUG
-	usleep(1000000);
+    char* found_ptr; 
+    found_ptr = strpbrk((char*)cmd_buffer, "\r\n"); // Check for end of line characters, \r or \n
+    if(found_ptr) { 
+      sscanf((char*)cmd_buffer, "%5u %5u", &arg1, &arg2); // sscanf will return 0 for int if not found.
+      printf("arg1:%u arg2:%u\n", arg1, arg2);
+      usleep(1000000);
 
-	if(!strcmp(ptr, "amouse")) {
-	  printf("Matched!\n"); 
-	  usleep(1000000);
-	} 
-
-	read_len = write_pos = 0;
-	ptr = strtok(NULL, " \r\n");
+      switch(arg1) {
+	case 1:
+	  printf("Selected help");
+	  break;
+	case 2:
+	  printf("test\n");
+	  break;
+	default:
+          printf("Unknown command.\n");
       }
+
+      read_len = write_pos = 0;
       memset(cmd_buffer, 0, CMD_BUFFER_LEN);
     }
 
   }
-
-  //free(cli_buffer);
 }

@@ -19,6 +19,11 @@
 
 #include <stdbool.h>
 
+
+/*** Shared definitions ***/
+
+extern const char amouse_title[];
+
 /* Protocol definitions */
 #define MOUSE_LMB_BIT 5 // Defines << shift for bit position
 #define MOUSE_RMB_BIT 4
