@@ -53,6 +53,8 @@ R"#(1) Help/Usage
 0) Read or write settings (Flash)
 )#";
 
+const char amouse_prompt[] = "amouse> ";
+
 uint8_t init_mouse_state[] = "\x40\x00\x00\x00"; // Our basic mouse packet (We send 3 or 4 bytes of it)
 
 
@@ -136,14 +138,16 @@ void push_update(mouse_state_t *mouse, bool full_packet) {
 void console(int fd) {
 
   uint write_pos = 0;
-  uint read_len= 0;
+  uint read_pos = 0;
+  uint read_len = 0;
 
-  uint arg1, arg2;
+  int argc;
+  uint arg1, arg2 = 0;
 
   serial_write_terminal(fd, (uint8_t*)amouse_title, sizeof(amouse_title));
   serial_write_terminal(fd, (uint8_t*)"\n", 1);
   serial_write_terminal(fd, (uint8_t*)amouse_menu, sizeof(amouse_menu));
-  serial_write_terminal(fd, (uint8_t*)"amouse> ", 8); 
+  serial_write_terminal(fd, (uint8_t*)amouse_prompt, sizeof(amouse_prompt)); 
 
   while(1) {
     write_pos += read_len;
@@ -152,27 +156,75 @@ void console(int fd) {
       serial_write(fd, cmd_buffer, write_pos); // DEBUG
       write_pos = 0;
       usleep(1000000);
+      // TODO: Make sure we let user know the command was discarded
+      // Potentially memset to zero here also?
     }
     // Keep reading to buffer until buffer ends, shrink each allowed read length as more data is added.
     read_len = serial_read(fd, cmd_buffer + write_pos, (CMD_BUFFER_LEN - write_pos));
     serial_write_terminal(fd, cmd_buffer + write_pos, sizeof(uint8_t) * read_len); // Echo to terminal
 
     printf("%.*s\n", write_pos, cmd_buffer); // DEBUG
-    usleep(50000); // TODO: Not arch independent.
+    //usleep(50000); // TODO: Not arch independent.
 
     char* found_ptr; 
-    found_ptr = strpbrk((char*)cmd_buffer, "\r\n"); // Check for end of line characters, \r or \n
+
+    // Handle ctrl+l (Redraw line, here)
+    found_ptr = strpbrk((char*)cmd_buffer, "\x0c"); // Check for end of line characters (\r or \n) or ctrl+l
+    if(found_ptr) {
+      printf("Found ctrl+l\n"); // DEBUG
+
+      memset(cmd_buffer + write_pos, 0, CMD_BUFFER_LEN - write_pos); // Clear ctrl+l and bytes after it from command line.
+      write_pos = (uint8_t*)found_ptr - cmd_buffer;
+      //if(write_pos - 1 > write_pos) { write_pos = 0; }
+      //else { write_pos = ((uint8_t*)found_ptr - cmd_buffer) - 1; }
+
+      printf("Write_pos is: %u", write_pos); // DEBUG
+      //memset(found_ptr, 0, 1); // Clear ctrl+l and bytes after it from command line.
+
+      // Rewrite current line as seen by console
+      serial_write_terminal(fd, (uint8_t*)"\r", 1);
+      serial_write_terminal(fd, (uint8_t*)amouse_prompt, sizeof(amouse_prompt));
+      serial_write_terminal(fd, cmd_buffer, write_pos + 1); // Write up to where ctrl+l was found.
+
+      printf("cmd_buffer is: %s\n", cmd_buffer);
+      usleep(1000000); //debug
+      read_len = 0;
+    }
+
+    found_ptr = strpbrk((char*)cmd_buffer, "\r\n"); // Check for end of line characters (\r or \n) or ctrl+l
     if(found_ptr) { 
-      sscanf((char*)cmd_buffer, "%5u %5u", &arg1, &arg2); // sscanf will return 0 for int if not found.
-      printf("arg1:%u arg2:%u\n", arg1, arg2);
+
+      // Process command buffer for backspace
+      read_pos = write_pos = 0;
+      while(((uint8_t*)(cmd_buffer + read_pos) < (uint8_t*)found_ptr) && (read_pos < CMD_BUFFER_LEN)) { // Read until linebreak or end of buffer.
+	// Handle backspace
+	if(strncmp((char*)(cmd_buffer + read_pos), "\b", 1) == 0) {
+	  if((write_pos - 1) < write_pos) { write_pos--; } // write_pos is a uint, so wraparound > than current value on subtraction. Avoid escaping buffer.
+	  cmd_buffer[write_pos] = '\0';
+	}
+	else {
+	  cmd_buffer[write_pos] = cmd_buffer[read_pos];
+	  write_pos++;
+	}
+	read_pos++;
+      }
+      // Zero the rest of the command buffer and clean any bytes not related to command.
+      memset(cmd_buffer + write_pos, 0, CMD_BUFFER_LEN - write_pos); 
+
+      // sscanf will return 0 for int if not found.
+      // argc will contain how many arguments were matched, -1 for none.
+      arg1 = arg2 = 0;
+      argc = sscanf((char*)cmd_buffer, "%5u %5u", &arg1, &arg2); 
+      printf("argc:%d arg1:%u arg2:%u\n", argc, arg1, arg2);
       usleep(1000000);
 
+      serial_write_terminal(fd, (uint8_t*)"\n", 1); // Confirm client linebreak
       switch(arg1) {
 	case 1:
-	  printf("Selected help");
+	  serial_write_terminal(fd, (uint8_t*)"Help\n", 5);
 	  break;
 	case 2:
-	  printf("test\n");
+	  serial_write_terminal(fd, (uint8_t*)"Settings\n", 9);
 	  break;
 	default:
           printf("Unknown command.\n");
@@ -180,7 +232,9 @@ void console(int fd) {
 
       read_len = write_pos = 0;
       memset(cmd_buffer, 0, CMD_BUFFER_LEN);
+      serial_write_terminal(fd, (uint8_t*)amouse_prompt, sizeof(amouse_prompt)); 
     }
 
+    usleep(1); // DEBUG
   }
 }
