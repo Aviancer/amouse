@@ -135,6 +135,10 @@ void push_update(mouse_state_t *mouse, bool full_packet) {
   else { mouse->update = 2; }
 }
 
+void console_prompt(int fd) {
+  serial_write_terminal(fd, (uint8_t*)amouse_prompt, sizeof(amouse_prompt)); 
+}
+
 void console(int fd) {
 
   uint write_pos = 0;
@@ -147,17 +151,15 @@ void console(int fd) {
   serial_write_terminal(fd, (uint8_t*)amouse_title, sizeof(amouse_title));
   serial_write_terminal(fd, (uint8_t*)"\n", 1);
   serial_write_terminal(fd, (uint8_t*)amouse_menu, sizeof(amouse_menu));
-  serial_write_terminal(fd, (uint8_t*)amouse_prompt, sizeof(amouse_prompt)); 
+  console_prompt(fd);
 
   while(1) {
     write_pos += read_len;
+    // Enforce buffer length
     if(write_pos >= CMD_BUFFER_LEN) { 
-      printf("Contents: #%.*s#\n", CMD_BUFFER_LEN, cmd_buffer);
-      serial_write(fd, cmd_buffer, write_pos); // DEBUG
       write_pos = 0;
-      usleep(1000000);
-      // TODO: Make sure we let user know the command was discarded
-      // Potentially memset to zero here also?
+      serial_write_terminal(fd, (uint8_t*)"\nBuffer full, discarded.\n", 25);
+      console_prompt(fd);
     }
     // Keep reading to buffer until buffer ends, shrink each allowed read length as more data is added.
     read_len = serial_read(fd, cmd_buffer + write_pos, (CMD_BUFFER_LEN - write_pos));
@@ -171,27 +173,20 @@ void console(int fd) {
     // Handle ctrl+l (Redraw line, here)
     found_ptr = strpbrk((char*)cmd_buffer, "\x0c"); // Check for end of line characters (\r or \n) or ctrl+l
     if(found_ptr) {
-      printf("Found ctrl+l\n"); // DEBUG
-
       memset(cmd_buffer + write_pos, 0, CMD_BUFFER_LEN - write_pos); // Clear ctrl+l and bytes after it from command line.
       write_pos = (uint8_t*)found_ptr - cmd_buffer;
-      //if(write_pos - 1 > write_pos) { write_pos = 0; }
-      //else { write_pos = ((uint8_t*)found_ptr - cmd_buffer) - 1; }
-
-      printf("Write_pos is: %u", write_pos); // DEBUG
-      //memset(found_ptr, 0, 1); // Clear ctrl+l and bytes after it from command line.
 
       // Rewrite current line as seen by console
       serial_write_terminal(fd, (uint8_t*)"\r", 1);
       serial_write_terminal(fd, (uint8_t*)amouse_prompt, sizeof(amouse_prompt));
       serial_write_terminal(fd, cmd_buffer, write_pos + 1); // Write up to where ctrl+l was found.
 
-      printf("cmd_buffer is: %s\n", cmd_buffer);
-      usleep(1000000); //debug
-      read_len = 0;
+      read_len = 0; // Ctrl+l and any additional input was discarded.
     }
 
-    found_ptr = strpbrk((char*)cmd_buffer, "\r\n"); // Check for end of line characters (\r or \n) or ctrl+l
+    // Check for end of line characters (\r or \n) or ctrl+l
+    // Full buffer will also be sent as a command even without linebreak.
+    found_ptr = strpbrk((char*)cmd_buffer, "\r\n"); 
     if(found_ptr) { 
 
       // Process command buffer for backspace
@@ -232,7 +227,7 @@ void console(int fd) {
 
       read_len = write_pos = 0;
       memset(cmd_buffer, 0, CMD_BUFFER_LEN);
-      serial_write_terminal(fd, (uint8_t*)amouse_prompt, sizeof(amouse_prompt)); 
+      console_prompt(fd);
     }
 
     usleep(1); // DEBUG
