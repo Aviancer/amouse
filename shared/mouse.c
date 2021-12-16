@@ -139,10 +139,35 @@ void console_prompt(int fd) {
   serial_write_terminal(fd, (uint8_t*)amouse_prompt, sizeof(amouse_prompt)); 
 }
 
+// Process command buffer for backspace
+void console_backspace(uint8_t cmd_buffer[], char* found_ptr, uint* write_pos) {
+  uint pread_pos = 0;
+  uint pwrite_pos = 0;
+
+  while((cmd_buffer + pread_pos < (uint8_t*)found_ptr) && (pread_pos < CMD_BUFFER_LEN)) { // Read until linebreak or end of buffer.
+    // Handle backspace
+    if(cmd_buffer[pread_pos] != '\b') {
+      cmd_buffer[pwrite_pos] = cmd_buffer[pread_pos];
+      pwrite_pos++;
+      printf("%c %d %d\n", cmd_buffer[pwrite_pos - 1], pwrite_pos - 1, pread_pos);
+      usleep(100000); // TODO: Not arch independent.
+    }
+    else if(pwrite_pos > 0) {
+      pwrite_pos--; // write_pos is a uint, so wraparound > than current value on subtraction. Avoid escaping buffer.
+    }
+    pread_pos++;
+  }
+  // Zero the rest of the command buffer and clean any bytes not related to command.
+  memset(cmd_buffer + pwrite_pos, 0, CMD_BUFFER_LEN - pwrite_pos); 
+  //memset(cmd_buffer + pwrite_pos, 0, CMD_BUFFER_LEN - pwrite_pos); 
+  //cmd_buffer[pwrite_pos] = '\0';
+  *write_pos = pwrite_pos;
+}
+
 void console(int fd) {
 
   uint write_pos = 0;
-  uint read_pos = 0;
+  //uint read_pos = 0;
   uint read_len = 0;
 
   int argc;
@@ -188,23 +213,10 @@ void console(int fd) {
     // Full buffer will also be sent as a command even without linebreak.
     found_ptr = strpbrk((char*)cmd_buffer, "\r\n"); 
     if(found_ptr) { 
-
-      // Process command buffer for backspace
-      read_pos = write_pos = 0;
-      while(((uint8_t*)(cmd_buffer + read_pos) < (uint8_t*)found_ptr) && (read_pos < CMD_BUFFER_LEN)) { // Read until linebreak or end of buffer.
-	// Handle backspace
-	if(strncmp((char*)(cmd_buffer + read_pos), "\b", 1) == 0) {
-	  if((write_pos - 1) < write_pos) { write_pos--; } // write_pos is a uint, so wraparound > than current value on subtraction. Avoid escaping buffer.
-	  cmd_buffer[write_pos] = '\0';
-	}
-	else {
-	  cmd_buffer[write_pos] = cmd_buffer[read_pos];
-	  write_pos++;
-	}
-	read_pos++;
-      }
-      // Zero the rest of the command buffer and clean any bytes not related to command.
-      memset(cmd_buffer + write_pos, 0, CMD_BUFFER_LEN - write_pos); 
+      
+      printf("call: %s\n", cmd_buffer);
+      usleep(1000000);
+      console_backspace(cmd_buffer, found_ptr, &write_pos);
 
       // sscanf will return 0 for int if not found.
       // argc will contain how many arguments were matched, -1 for none.
