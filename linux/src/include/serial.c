@@ -55,7 +55,7 @@ int serial_write_terminal(int fd, uint8_t *buffer, int size) {
 // Non-blocking read
 int serial_read(int fd, uint8_t *buffer, int size) {
   int bytes=0;
-  for(int i=0; i <= size; i++) {
+  for(int i=0; i < size; i++) {
     if(read(fd, &buffer[bytes], 1) > 0) { bytes++; }
     else { break; }
   }

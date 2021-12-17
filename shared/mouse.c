@@ -37,7 +37,8 @@
 
 /*** Shared definitions ***/
 
-#define CMD_BUFFER_LEN 512
+#define CMD_BUFFER_LEN 10
+#define CTRL_L "\x0c"
 
 const char amouse_title[] =
 R"#( __ _   _ __  ___ _  _ ___ ___ 
@@ -135,6 +136,9 @@ void push_update(mouse_state_t *mouse, bool full_packet) {
   else { mouse->update = 2; }
 }
 
+
+/*** Serial console ***/
+
 void console_prompt(int fd) {
   serial_write_terminal(fd, (uint8_t*)amouse_prompt, sizeof(amouse_prompt)); 
 }
@@ -149,29 +153,27 @@ void console_backspace(uint8_t cmd_buffer[], char* found_ptr, uint* write_pos) {
     if(cmd_buffer[pread_pos] != '\b') {
       cmd_buffer[pwrite_pos] = cmd_buffer[pread_pos];
       pwrite_pos++;
-      printf("%c %d %d\n", cmd_buffer[pwrite_pos - 1], pwrite_pos - 1, pread_pos);
-      usleep(100000); // TODO: Not arch independent.
     }
+    // write_pos is a uint, so wraparound > than current value on subtraction. Avoid escaping buffer.
     else if(pwrite_pos > 0) {
-      pwrite_pos--; // write_pos is a uint, so wraparound > than current value on subtraction. Avoid escaping buffer.
+      pwrite_pos--; 
     }
     pread_pos++;
   }
   // Zero the rest of the command buffer and clean any bytes not related to command.
   memset(cmd_buffer + pwrite_pos, 0, CMD_BUFFER_LEN - pwrite_pos); 
-  //memset(cmd_buffer + pwrite_pos, 0, CMD_BUFFER_LEN - pwrite_pos); 
-  //cmd_buffer[pwrite_pos] = '\0';
+  if(pwrite_pos > 0) { pwrite_pos--; }
   *write_pos = pwrite_pos;
 }
 
 void console(int fd) {
 
   uint write_pos = 0;
-  //uint read_pos = 0;
-  uint read_len = 0;
+  int read_len = 0;
 
   int argc;
-  uint arg1, arg2 = 0;
+  uint arg1 = 0;
+  uint arg2 = 0;
 
   serial_write_terminal(fd, (uint8_t*)amouse_title, sizeof(amouse_title));
   serial_write_terminal(fd, (uint8_t*)"\n", 1);
@@ -179,16 +181,29 @@ void console(int fd) {
   console_prompt(fd);
 
   while(1) {
+
     write_pos += read_len;
     // Enforce buffer length
     if(write_pos >= CMD_BUFFER_LEN) { 
-      write_pos = 0;
-      serial_write_terminal(fd, (uint8_t*)"\nBuffer full, discarded.\n", 25);
-      console_prompt(fd);
+      write_pos = CMD_BUFFER_LEN - 1; // Keep one byte of buffer free for linebreak or backspace.
     }
     // Keep reading to buffer until buffer ends, shrink each allowed read length as more data is added.
-    read_len = serial_read(fd, cmd_buffer + write_pos, (CMD_BUFFER_LEN - write_pos));
-    serial_write_terminal(fd, cmd_buffer + write_pos, sizeof(uint8_t) * read_len); // Echo to terminal
+    if(write_pos < CMD_BUFFER_LEN) {
+      read_len = serial_read(fd, cmd_buffer + write_pos, (CMD_BUFFER_LEN - write_pos));
+    }
+    else {
+      serial_read(fd, cmd_buffer + write_pos, 1); // Keep reading for linebreak or backspace.
+    }
+
+    // Echo to console
+    // TODO: Workaround, needs more concise logic.
+    if(cmd_buffer[write_pos] != '\b' && (write_pos < CMD_BUFFER_LEN - 1)) {
+      serial_write_terminal(fd, cmd_buffer + write_pos, sizeof(uint8_t) * read_len); 
+    }
+    else if (write_pos > 0 && cmd_buffer[write_pos] == '\b') { 
+      serial_write_terminal(fd, cmd_buffer + write_pos, sizeof(uint8_t) * read_len); 
+    }
+
 
     printf("%.*s\n", write_pos, cmd_buffer); // DEBUG
     //usleep(50000); // TODO: Not arch independent.
@@ -196,7 +211,7 @@ void console(int fd) {
     char* found_ptr; 
 
     // Handle ctrl+l (Redraw line, here)
-    found_ptr = strpbrk((char*)cmd_buffer, "\x0c"); // Check for end of line characters (\r or \n) or ctrl+l
+    found_ptr = strpbrk((char*)cmd_buffer, CTRL_L); // Check for end of line characters (\r or \n) or ctrl+l
     if(found_ptr) {
       memset(cmd_buffer + write_pos, 0, CMD_BUFFER_LEN - write_pos); // Clear ctrl+l and bytes after it from command line.
       write_pos = (uint8_t*)found_ptr - cmd_buffer;
@@ -208,6 +223,12 @@ void console(int fd) {
 
       read_len = 0; // Ctrl+l and any additional input was discarded.
     }
+    
+    found_ptr = strpbrk((char*)cmd_buffer, "\b"); 
+    if(found_ptr) {
+      console_backspace(cmd_buffer, found_ptr, &write_pos);
+      read_len = 0; // TODO: Backspace won't work without this, why?
+    }
 
     // Check for end of line characters (\r or \n) or ctrl+l
     // Full buffer will also be sent as a command even without linebreak.
@@ -216,10 +237,10 @@ void console(int fd) {
       
       printf("call: %s\n", cmd_buffer);
       usleep(1000000);
-      console_backspace(cmd_buffer, found_ptr, &write_pos);
 
       // sscanf will return 0 for int if not found.
       // argc will contain how many arguments were matched, -1 for none.
+      // TODO: Fix condition where ne long number counts as both arguments.
       arg1 = arg2 = 0;
       argc = sscanf((char*)cmd_buffer, "%5u %5u", &arg1, &arg2); 
       printf("argc:%d arg1:%u arg2:%u\n", argc, arg1, arg2);
