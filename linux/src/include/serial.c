@@ -44,7 +44,8 @@ int serial_write_terminal(int fd, uint8_t *buffer, int size) {
   int bytes=0;
   for(; bytes < size; bytes++) {
     // Convert LF to CRLF
-    if(strncmp((char*)&buffer[bytes], "\n", 1) == 0) { 
+    //if(strncmp((char*)&buffer[bytes], "\n", 1) == 0) { 
+    if(buffer[bytes] == '\n') {
       write(fd, "\r", 1);
     }
     write(fd, &buffer[bytes], 1);

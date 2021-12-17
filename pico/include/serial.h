@@ -47,6 +47,8 @@ void mouse_serial_init(int uart_id);
 
 int serial_write(int uart_id, uint8_t *buffer, int size);
 
+int serial_write_terminal(int uart_id, uint8_t *buffer, int size);
+
 int serial_read(int uart_id, uint8_t *buffer, int size);
 
 int get_pins(int flag);

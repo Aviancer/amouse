@@ -73,12 +73,27 @@ int serial_write(int uart_id, uint8_t *buffer, int size) {
   return bytes;
 }
 
+/* Write to serial out with enforced order, convert terminal characters */
+int serial_write_terminal(int uart_id, uint8_t *buffer, int size) { 
+  uart_inst_t* uart = get_uart(uart_id);
+  int bytes=0;
+  if(uart != NULL) {
+    for(; bytes <= size; bytes++) {
+      if(buffer[bytes] == '\n') {
+	uart_putc_raw(uart, '\r');
+      }
+      uart_putc_raw(uart, buffer[bytes]); 
+    } 
+  }
+  return bytes;
+}
+
 // Non-blocking read
 int serial_read(int uart_id, uint8_t *buffer, int size) { 
   uart_inst_t* uart = get_uart(uart_id);
   int bytes=0;
   if(uart != NULL) {
-    for(int i=0; i <= size; i++) {
+    for(int i=0; i < size; i++) {
       if(uart_is_readable(uart)) {
 	buffer[bytes] = uart_getc(uart);
 	bytes++;
