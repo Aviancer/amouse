@@ -160,19 +160,26 @@ void timespec_diff(struct timespec *ts1, struct timespec *ts2, struct timespec *
   }
 }
 
-struct timespec get_target_time(uint32_t delay) {
+bool timespec_reached(struct timespec *target) {
   struct timespec time;
   clock_gettime(CLOCK_MONOTONIC, &time);
 
+  if(time.tv_sec < target->tv_sec) { return false; }
+  if(time.tv_sec > target->tv_sec) { return true; }
+  return(time.tv_nsec >= target->tv_nsec);
+}
+
+struct timespec get_target_time(uint8_t seconds, uint32_t nseconds) {
+  struct timespec time, target;
+  clock_gettime(CLOCK_MONOTONIC, &time);
+  
   // 1200 baud (bits/s) is 133.333333333... bytes/s
   // 44.44.. updates per second with 3 bytes.
   // 33.25.. updates per second with 4 bytes.
-  // ~0.0075 seconds per byte, target time calculated for 4 bytes.
+  // ~0.0075 seconds per byte, target time calculated for 4 bytes
+  
+  target.tv_sec  = time.tv_sec + seconds + ((time.tv_nsec + nseconds) / NS_FULL_SECOND); 
+  target.tv_nsec = (time.tv_nsec + nseconds) % NS_FULL_SECOND; 
 
-  uint32_t now_nsec; 
-  now_nsec = time.tv_nsec;
-  time.tv_nsec = (time.tv_nsec + delay) % NS_FULL_SECOND;
-  if(time.tv_nsec < now_nsec) { time.tv_sec++; }
-
-  return time;
+  return(target);
 }

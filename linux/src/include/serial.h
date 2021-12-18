@@ -17,6 +17,7 @@
 #define SERIAL_H_
 
 #include <termios.h> // POSIX terminal control defs
+#include <stdbool.h>
 
 int serial_write(int fd, uint8_t *buffer, int size);
 
@@ -38,6 +39,8 @@ void mouse_ident(int fd, int wheel);
 
 void timespec_diff(struct timespec *ts1, struct timespec *ts2, struct timespec *result);
 
-struct timespec get_target_time(uint32_t delay);
+bool timespec_reached(struct timespec *target);
+
+struct timespec get_target_time(uint8_t seconds, uint32_t nseconds);
 
 #endif // SERIAL_H_

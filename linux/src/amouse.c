@@ -208,6 +208,7 @@ int main(int argc, char **argv) {
   }
   parse_opts(argc, argv, options);
 
+
   /*** USB mouse device input ***/
   int mouse_fd = open_usbinput(options->mousepath, options->exclusive);
   if(mouse_fd < 0) {
@@ -226,35 +227,41 @@ int main(int argc, char **argv) {
     exit(-1);
   }
 
+
   /*** Serial device ***/
-  int fd;
-  fd = open(options->serialpath, O_RDWR | O_NOCTTY | O_NONBLOCK); 
-  if(fd < 0) {
+  int serial_fd;
+  serial_fd = open(options->serialpath, O_RDWR | O_NOCTTY | O_NONBLOCK); 
+  if(serial_fd < 0) {
     fprintf(stderr, "Serial device file open() failed: %d: %s\n", errno, strerror(errno));
     exit(-1);
   }
 
-  if (tcgetattr(fd, &old_tty) != 0) {
+  if (tcgetattr(serial_fd, &old_tty) != 0) {
     fprintf(stderr, "tcgetattr() failed: %d: %s\n", errno, strerror(errno));
   }
  
   // Initialize serial parameters 
-  setup_tty(fd, (speed_t)B1200);
-  enable_pin(fd, TIOCM_RTS | TIOCM_DTR);
+  setup_tty(serial_fd, (speed_t)B1200);
+  enable_pin(serial_fd, TIOCM_RTS | TIOCM_DTR);
 
   fcntl (0, F_SETFL, O_NONBLOCK); // Nonblock 0=stdin
   setvbuf(stdout, NULL, _IONBF, 0); // Unbuffer stdout
+
+  // Buffer for checking for requests from serial port. 
+  uint8_t serial_buffer[2] = {0}; 
+  int i, rx_len; // Allocate outside main loop instead of allocating every time.
+
   
   // Aggregate movements before sending
-  struct timespec time_now, time_target, time_diff;
+  struct timespec time_rx_target, time_tx_target;
   mouse_state_t mouse;
   mouse.pc_state = CTS_UNINIT;
   mouse.sensitivity = 1.0;
   reset_mouse_state(&mouse); // Set packet memory to initial state
 
-  int i; // Allocate outside main loop instead of allocating every time.
-
-  time_target = get_target_time(NS_SERIALDELAY_3B);
+  // Set timers
+  time_tx_target = get_target_time(0, NS_SERIALDELAY_3B);
+  time_rx_target = get_target_time(1, 0);
   
   printf("%s\n\n", amouse_title);
   aprint("Waiting for PC to initialize mouse driver..");
@@ -262,27 +269,33 @@ int main(int argc, char **argv) {
   // Ident immediately on program start up.
   if(options->immediate) {
     aprint("Performing immediate identification as mouse.");
-    mouse_ident(fd, options->wheel);
+    mouse_ident(serial_fd, options->wheel);
     mouse.pc_state = CTS_TOGGLED; // Bypass CTS detection, send events straight away.
   }
 
-
+  
   /*** Main loop ***/
 
-  /* uint8_t *buffer; // DEBUG
-  buffer = (uint8_t *)malloc(sizeof(uint8_t)*1024); */
-
   while(1) {
-    bool pc_pins = get_pin(fd, TIOCM_CTS | TIOCM_DSR);
 
-    console(fd); // DEBUG
+    // Check for request for serial console  
+    // Repeating non-blocking reads is slow so instead we queue checks every now and then with timer.
+    if(timespec_reached(&time_rx_target)) {
+      rx_len = serial_read(serial_fd, serial_buffer, 1);
+      if(rx_len > 0) {
+	if(serial_buffer[0] == '\r' || serial_buffer[0] == '\n') {
+	  aprint("Console requested from serial line, suspending adapter.");
+	  console(serial_fd);
+	  aprint("Serial console closed, resuming adapter.");
+	}
+      }
+      time_rx_target = get_target_time(1, 0); 
+    }
 
-    // DEBUG
-    /* int len = serial_read(fd, buffer, 1024);
-    if(len > 0) {
-      printf("%.*s", len, buffer);
-      serial_write(fd, buffer, sizeof(uint8_t)*len);
-    } */
+
+    // Mouse handling
+
+    bool pc_pins = get_pin(serial_fd, TIOCM_CTS | TIOCM_DSR);
 
     if(!pc_pins) { // Computers RTS & DTR low 
       mouse.pc_state = CTS_LOW_INIT;
@@ -294,17 +307,7 @@ int main(int argc, char **argv) {
 	aprint("Computers RTS & DTR pins set low, identifying as mouse.");
       }
       mouse.pc_state = CTS_TOGGLED;
-      mouse_ident(fd, options->wheel);
-      /* Negotiate 2400 baud rate 
-       *
-       * Microsoft protocols may be limited to only 1200 baud.
-       *
-       * */
-      //setup_tty(fd, (speed_t)B1200);
-
-      /* setup_tty(fd, &tty, (speed_t)B2400);*/
-      //serial_write(fd, "*o", 2); 
-      //usleep(100);
+      mouse_ident(serial_fd, options->wheel);
       aprint("Mouse initialized. Good to go!");
     }
 
@@ -315,10 +318,7 @@ int main(int argc, char **argv) {
       runtime_settings(&mouse);
 
       /*** Send mouse state updates clamped to baud max rate ***/ 
-      clock_gettime(CLOCK_MONOTONIC, &time_now);
-      timespec_diff(&time_target, &time_now, &time_diff);
-
-      if((time_diff.tv_sec < 0 && mouse.update > -1) || mouse.force_update) {
+      if((timespec_reached(&time_tx_target) && mouse.update > -1) || mouse.force_update) {
 	input_sensitivity(&mouse);
         update_mouse_state(&mouse);
          
@@ -326,17 +326,17 @@ int main(int argc, char **argv) {
 	if(options->debug) { fprintf(stderr, "Sensitivity: %f\n", mouse.sensitivity); }
         for(i=0; i <= mouse.update; i++) {
           if(options->debug) {
-	    fprintf(stderr, "Time: %d.%d\n", (int)time_diff.tv_sec, (int)time_diff.tv_nsec);
+	    fprintf(stderr, "Time: %d.%d\n", (int)time_tx_target.tv_sec, (int)time_tx_target.tv_nsec);
             fprintf(stderr, "Sent(ev:%d) %d: %x\n", ev.code, i, mouse.state[i]);
 	    fprintf(stderr, "Mouse state(%d): %s\n", i, byte_to_bitstring(mouse.state[i]));
 	  }
-	  serial_write(fd, &mouse.state[i], sizeof(uint8_t));
+	  serial_write(serial_fd, &mouse.state[i], sizeof(uint8_t));
         }
 	if(options->debug) { printf("\n"); }
 
 	// Use variable send rate depending on whether middle mouse button pressed or not (3 or 4 byte updates)
-	if(mouse.mmb) { time_target = get_target_time(NS_SERIALDELAY_4B); }
-	else          { time_target = get_target_time(NS_SERIALDELAY_3B); }
+	if(mouse.mmb) { time_tx_target = get_target_time(0, NS_SERIALDELAY_4B); }
+	else          { time_tx_target = get_target_time(0, NS_SERIALDELAY_3B); }
 
 	reset_mouse_state(&mouse);
       }
@@ -344,10 +344,10 @@ int main(int argc, char **argv) {
     usleep(1);
   }
 
-  disable_pin(fd, TIOCM_RTS | TIOCM_DTR);
+  disable_pin(serial_fd, TIOCM_RTS | TIOCM_DTR);
 
-  if(options->exclusive) { ioctl(fd, EVIOCGRAB, 0); } // Release exclusive mouse access
-  close(fd);
+  if(options->exclusive) { ioctl(mouse_fd, EVIOCGRAB, 0); } // Release exclusive mouse access
+  close(serial_fd);
 
   free(options);
 
