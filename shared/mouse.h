@@ -48,8 +48,15 @@ typedef struct mouse_state {
   int x, y, wheel;
   int update; // How many bytes to send
   bool lmb, rmb, mmb, force_update;
-  float sensitivity; // Sensitivity coefficient
 } mouse_state_t;
+
+// Struct for user settable mouse options
+typedef struct mouse_opts {
+  int wheel;
+  float sensitivity; // Sensitivity coefficient
+} mouse_opts_t;
+
+extern mouse_opts_t mouse_options; // Global options
 
 // States of mouse init request from PC
 enum PC_INIT_STATES {

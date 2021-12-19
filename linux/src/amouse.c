@@ -37,10 +37,9 @@
 /*** Program parameters ***/ 
 
 // Struct for storing pointers to dynamically allocated memory containing options.
-struct opts {
+struct linux_opts {
   char *mousepath; // Pointers, memory is dynamically allocated.
   char *serialpath;
-  int wheel;
   int exclusive;
   int immediate;
   int debug;
@@ -61,13 +60,13 @@ void showhelp(char *argv[]) {
 	 "  -d Print out debug information on mouse state\n", V_MAJOR, V_MINOR, V_REVISION, argv[0]);
 }
 
-void parse_opts(int argc, char **argv, struct opts *options) {
+void parse_opts(int argc, char **argv, struct linux_opts *options) {
   int option_index = 0;
   int quit = 0;
 
   while (( option_index = getopt(argc, argv, "hm:s:weid")) != -1) {
     // Defaults
-    options->wheel = 1;
+    mouse_options.wheel = 1;
     options->exclusive = 1;
 
     switch(option_index) {
@@ -82,7 +81,7 @@ void parse_opts(int argc, char **argv, struct opts *options) {
         showhelp(argv); exit(0);
         break;
       case 'w':
-	options->wheel = 0;
+	mouse_options.wheel = 0;
 	break;
       case 'e':
 	options->exclusive = 0; // Computer will also get mouse inputs.
@@ -146,7 +145,7 @@ static int open_usbinput(const char* device, int exclusive) {
   return -1;
 }
 
-static inline void process_mouse_report(mouse_state_t *mouse, struct input_event const *ev, struct opts *options) {
+static inline void process_mouse_report(mouse_state_t *mouse, struct input_event const *ev, struct linux_opts *options) {
   /** Handle mouse buttons ***/
   if(ev->type == EV_KEY) {
     switch(ev->code) {
@@ -161,7 +160,7 @@ static inline void process_mouse_report(mouse_state_t *mouse, struct input_event
 	push_update(mouse, mouse->mmb);
 	break;
       case BTN_MIDDLE:
-	if(options->wheel) {
+	if(mouse_options.wheel) {
 	  mouse->mmb = ev->value;
 	  mouse->force_update = true;
 	  push_update(mouse, true); // Every time MMB changes (on or off), must send 4 bytes.
@@ -182,7 +181,7 @@ static inline void process_mouse_report(mouse_state_t *mouse, struct input_event
 	mouse->y = clampi(mouse->y, -36862, 36862);
 	break;
       case REL_WHEEL:
-	if(options->wheel) {
+	if(mouse_options.wheel) {
 	  mouse->wheel += ev->value;
 	  mouse->wheel = clampi(mouse->wheel, -63, 63);
 	  push_update(mouse, true);
@@ -201,7 +200,7 @@ int main(int argc, char **argv) {
 
   // Parse commandline options
   if(argc < 2) { showhelp(argv); exit(0); }
-  struct opts *options = (struct opts*) calloc(1, sizeof(struct opts)); // Memory is zeroed by calloc
+  struct linux_opts *options = (struct linux_opts*) calloc(1, sizeof(struct linux_opts)); // Memory is zeroed by calloc
   if (options == NULL) {
     fprintf(stderr, "Failed calloc() for opts: %d: %s\n", errno, strerror(errno));
     exit(-1);
@@ -256,7 +255,7 @@ int main(int argc, char **argv) {
   struct timespec time_rx_target, time_tx_target;
   mouse_state_t mouse;
   mouse.pc_state = CTS_UNINIT;
-  mouse.sensitivity = 1.0;
+  mouse_options.sensitivity = 1.0;
   reset_mouse_state(&mouse); // Set packet memory to initial state
 
   // Set timers
@@ -269,7 +268,7 @@ int main(int argc, char **argv) {
   // Ident immediately on program start up.
   if(options->immediate) {
     aprint("Performing immediate identification as mouse.");
-    mouse_ident(serial_fd, options->wheel);
+    mouse_ident(serial_fd, mouse_options.wheel);
     mouse.pc_state = CTS_TOGGLED; // Bypass CTS detection, send events straight away.
   }
 
@@ -306,7 +305,7 @@ int main(int argc, char **argv) {
 	aprint("Computers RTS & DTR pins set low, identifying as mouse.");
       }
       mouse.pc_state = CTS_TOGGLED;
-      mouse_ident(serial_fd, options->wheel);
+      mouse_ident(serial_fd, mouse_options.wheel);
       aprint("Mouse initialized. Good to go!");
     }
 
@@ -322,7 +321,7 @@ int main(int argc, char **argv) {
         update_mouse_state(&mouse);
          
 	// Send updates
-	if(options->debug) { fprintf(stderr, "Sensitivity: %f\n", mouse.sensitivity); }
+	if(options->debug) { fprintf(stderr, "Sensitivity: %f\n", mouse_options.sensitivity); }
         for(i=0; i <= mouse.update; i++) {
           if(options->debug) {
 	    fprintf(stderr, "Time: %d.%d\n", (int)time_tx_target.tv_sec, (int)time_tx_target.tv_nsec);

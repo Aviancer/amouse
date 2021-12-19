@@ -61,6 +61,8 @@ uint8_t init_mouse_state[] = "\x40\x00\x00\x00"; // Our basic mouse packet (We s
 
 /*** Global data / BSS (Avoid stack) ***/ 
 
+mouse_opts_t mouse_options; // Global user settable options.
+
 // We should avoid calloc/malloc on embedded systems.
 uint8_t cmd_buffer[CMD_BUFFER_LEN + 1] = {0};
 
@@ -110,9 +112,9 @@ void runtime_settings(mouse_state_t *mouse) {
   if(mouse->lmb && mouse->rmb) {
     // Handle sensitivity changes
     if(mouse->wheel != 0) {
-      if(mouse->wheel < 0) { mouse->sensitivity -= 0.2; }
-      else { mouse->sensitivity += 0.2; }
-      mouse->sensitivity = clampf(mouse->sensitivity, 0.2, 2.0);
+      if(mouse->wheel < 0) { mouse_options.sensitivity -= 0.2; }
+      else { mouse_options.sensitivity += 0.2; }
+      mouse_options.sensitivity = clampf(mouse_options.sensitivity, 0.2, 2.0);
     }
 
     if(mouse->mmb) {
@@ -123,8 +125,8 @@ void runtime_settings(mouse_state_t *mouse) {
 
 // Adjust mouse input based on sensitivity
 void input_sensitivity(mouse_state_t *mouse) {
-  mouse->x = mouse->x * mouse->sensitivity;
-  mouse->y = mouse->y * mouse->sensitivity;
+  mouse->x = mouse->x * mouse_options.sensitivity;
+  mouse->y = mouse->y * mouse_options.sensitivity;
 }
 
 
@@ -142,7 +144,7 @@ void push_update(mouse_state_t *mouse, bool full_packet) {
 typedef struct scan_int_ret {
   bool found;
   int value;
-  uint16_t offset; // How many bytes we read into buffer.
+  uint16_t offset; // How many bytes we have read into buffer.
 } scan_int_t;
 
 // Scan for number in character array
@@ -153,6 +155,9 @@ scan_int_t scan_int(uint8_t* buffer, uint i, uint scan_size, uint max_digits) {
   char intbuffer[6] = {0};  
   uint j=0;
   uint usable_size=5;
+ 
+  // Cap requested digits to buffer size.
+  if(max_digits > sizeof(intbuffer) - 1) { max_digits = sizeof(intbuffer) - 1; }
 
   // Scan up to number
   for(; i <= scan_size && (buffer[i] < '0' || buffer[i] > '9'); i++) {
@@ -275,11 +280,14 @@ void console(int fd) {
 	    serial_write_terminal(fd, (uint8_t*)"Settings\n", 9);
 	    break;
 	  case 3:
+	    mouse_options.wheel = !mouse_options.wheel;
 	    serial_write_terminal(fd, (uint8_t*)"Toggle\n", 7);
 	    break;
 	  case 4:
 	    scan_i = scan_int(cmd_buffer, scan_i.offset, CMD_BUFFER_LEN, 5);
-	    printf("%d\n", scan_i.value); // DEBUG
+	    if(scan_i.found) {
+	      mouse_options.sensitivity = clampf(((float)scan_i.value / 10), 0.1, 2.0);
+	    }
 	    break;
 	  case 5:
 	    serial_write_terminal(fd, (uint8_t*)"Bye!\n", 5);

@@ -34,22 +34,7 @@
 // Technically could support multiple mice connected to the same system if we kept more mouse states in memory.
 
 
-/*** Program parameters ***/ 
-
-// Struct for storing pointers to dynamically allocated memory containing options.
-typedef struct opts {
-  int wheel;
-} opts_t;
-
-void set_opts(struct opts *options) {
-  options->wheel = 1;
-}
-
-
 /*** Global state variables ****/
-
-// Set default options, support mouse wheel.
-opts_t options = { .wheel=1 };
 
 extern mouse_state_t mouse; // Needs to be available for serial functions.
 mouse_state_t mouse;        // int values default to 0 
@@ -95,7 +80,7 @@ static inline void process_mouse_report(mouse_state_t *mouse, hid_mouse_report_t
     mouse->rmb = test_mouse_button(p_report->buttons, MOUSE_BUTTON_RIGHT);
     push_update(mouse, mouse->mmb);
 
-    if(options.wheel && (button_changed_mask & MOUSE_BUTTON_MIDDLE)) {
+    if(mouse_options.wheel && (button_changed_mask & MOUSE_BUTTON_MIDDLE)) {
       mouse->mmb = test_mouse_button(p_report->buttons, MOUSE_BUTTON_MIDDLE);
       push_update(mouse, true);
     }
@@ -113,7 +98,7 @@ static inline void process_mouse_report(mouse_state_t *mouse, hid_mouse_report_t
     mouse->y  = clampi(mouse->y, -36862, 36862);
     push_update(mouse, mouse->mmb);
   }
-  if(options.wheel && p_report->wheel) {
+  if(mouse_options.wheel && p_report->wheel) {
       mouse->wheel += p_report->wheel;
       mouse->wheel  = clampi(mouse->wheel, -63, 63);
       push_update(mouse, true);
@@ -140,7 +125,10 @@ int main() {
   //enable_pins(UART_RTS_BIT | UART_DTR_BIT);
   reset_mouse_state(&mouse);
   mouse.pc_state = CTS_UNINIT;
-  mouse.sensitivity = 1.0;
+
+  // Set default options, support mouse wheel.
+  mouse_options.wheel=1;
+  mouse_options.sensitivity=1.0;
 
   // Initialize USB
   tusb_init();
@@ -181,7 +169,7 @@ int main() {
     // ### Mouse initiaizing request detected
     if(!cts_pin && mouse.pc_state == CTS_LOW_INIT) {
       mouse.pc_state = CTS_TOGGLED;
-      mouse_ident(0, options.wheel);
+      mouse_ident(0, mouse_options.wheel);
     }
 
     /*** Mouse update loop ***/
