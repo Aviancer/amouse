@@ -23,7 +23,7 @@
 #ifdef __linux__
 #include <stdlib.h>
 #include <unistd.h> // TODO: replace with better than usleep()
-#include <stdio.h> // DEBUG
+#include <stdio.h>  // DEBUG
 #include "../linux/src/include/version.h"
 #include "../linux/src/include/serial.h"
 #else 
@@ -139,6 +139,38 @@ void push_update(mouse_state_t *mouse, bool full_packet) {
 
 /*** Serial console ***/
 
+typedef struct scan_int_ret {
+  bool found;
+  int value;
+  uint16_t offset; // How many bytes we read into buffer.
+} scan_int_t;
+
+// Scan for number in character array
+// Avoids sscanf() which tripled project size from including <stdio.h>
+scan_int_t scan_int(uint8_t* buffer, uint i, uint scan_size, uint max_digits) {
+  scan_int_t result;
+
+  char intbuffer[6] = {0};  
+  uint j=0;
+  uint usable_size=5;
+
+  // Scan up to number
+  for(; i <= scan_size && (buffer[i] < '0' || buffer[i] > '9'); i++) {
+    ;
+  }
+  if(scan_size - i > 5) { usable_size = i + 5; }
+  // Copy until number end
+  for(; i <= usable_size && buffer[i] >= '0' && buffer[i] <= '9' && j < max_digits; i++) {
+    intbuffer[j] = buffer[i]; 
+    j++;
+  }
+
+  result.found  = (j > 0);
+  result.value  = atoi(intbuffer);
+  result.offset = i; 
+  return(result);
+}
+
 void console_prompt(int fd) {
   serial_write_terminal(fd, (uint8_t*)amouse_prompt, sizeof(amouse_prompt)); 
 }
@@ -169,10 +201,7 @@ void console(int fd) {
 
   uint write_pos = 0;
   int read_len = 0;
-
-  int argc;
-  uint arg1 = 0;
-  uint arg2 = 0;
+  scan_int_t scan_i;
   
   memset(cmd_buffer, 0, CMD_BUFFER_LEN); // Clear command buffer if we get called multiple times.
 
@@ -233,21 +262,24 @@ void console(int fd) {
     // Full buffer will also be sent as a command even without linebreak.
     found_ptr = strpbrk((char*)cmd_buffer, "\r\n"); 
     if(found_ptr) { 
-      // sscanf will return 0 for int if not found.
-      // argc will contain how many arguments were matched, -1 for none.
-      // TODO: Fix condition where ne long number counts as both arguments.
-      arg1 = arg2 = 0;
-      argc = sscanf((char*)cmd_buffer, "%5u %5u", &arg1, &arg2); 
-
       serial_write_terminal(fd, (uint8_t*)"\n", 1); // Confirm client linebreak
 
-      if(argc > 0) {
-	switch(arg1) {
+      scan_i = scan_int(cmd_buffer, 0, CMD_BUFFER_LEN, 5);
+
+      if(scan_i.found) {
+	switch(scan_i.value) {
 	  case 1:
 	    serial_write_terminal(fd, (uint8_t*)amouse_menu, sizeof(amouse_menu));
 	    break;
 	  case 2:
 	    serial_write_terminal(fd, (uint8_t*)"Settings\n", 9);
+	    break;
+	  case 3:
+	    serial_write_terminal(fd, (uint8_t*)"Toggle\n", 7);
+	    break;
+	  case 4:
+	    scan_i = scan_int(cmd_buffer, scan_i.offset, CMD_BUFFER_LEN, 5);
+	    printf("%d\n", scan_i.value); // DEBUG
 	    break;
 	  case 5:
 	    serial_write_terminal(fd, (uint8_t*)"Bye!\n", 5);
@@ -263,6 +295,6 @@ void console(int fd) {
       console_prompt(fd);
     }
 
-    usleep(1); // DEBUG
+    //usleep(1); // DEBUG
   }
 }

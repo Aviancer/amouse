@@ -249,7 +249,7 @@ int main(int argc, char **argv) {
 
   // Buffer for checking for requests from serial port. 
   uint8_t serial_buffer[2] = {0}; 
-  int i, rx_len; // Allocate outside main loop instead of allocating every time.
+  int i; // Allocate outside main loop instead of allocating every time.
 
   
   // Aggregate movements before sending
@@ -281,8 +281,7 @@ int main(int argc, char **argv) {
     // Check for request for serial console  
     // Repeating non-blocking reads is slow so instead we queue checks every now and then with timer.
     if(timespec_reached(&time_rx_target)) {
-      rx_len = serial_read(serial_fd, serial_buffer, 1);
-      if(rx_len > 0) {
+      if(serial_read(serial_fd, serial_buffer, 1) > 0) {
 	if(serial_buffer[0] == '\r' || serial_buffer[0] == '\n') {
 	  aprint("Console requested from serial line, suspending adapter.");
 	  console(serial_fd);

@@ -52,9 +52,12 @@ void set_opts(struct opts *options) {
 opts_t options = { .wheel=1 };
 
 extern mouse_state_t mouse; // Needs to be available for serial functions.
-mouse_state_t mouse; // int values default to 0 
+mouse_state_t mouse;        // int values default to 0 
 
-static uint32_t txtimer_target; // Serial transmit timer target time
+static uint32_t time_tx_target; // Serial transmit timers target time
+static uint32_t time_rx_target; // Serial receive timers target time
+
+uint8_t serial_buffer[2] = {0}; // Buffer for inputs from serial port.
 
 // Aggregate movements before sending
 CFG_TUSB_MEM_SECTION static hid_mouse_report_t usb_mouse_report_prev;
@@ -69,8 +72,8 @@ int led_state = 0;
 void queue_tx(mouse_state_t *mouse) {
   // Update timer target for next transmit
   // Use variable send rate depending on whether a 3 or 4 byte update was sent
-  if(mouse->update > 2) { txtimer_target = time_us_32() + U_SERIALDELAY_4B; }
-  else                  { txtimer_target = time_us_32() + U_SERIALDELAY_3B; }
+  if(mouse->update > 2) { time_tx_target = time_us_32() + U_SERIALDELAY_4B; }
+  else                  { time_tx_target = time_us_32() + U_SERIALDELAY_3B; }
 }
 
 
@@ -150,10 +153,23 @@ int main() {
   gpio_init(UART_CTS_PIN); 
   gpio_set_dir(UART_CTS_PIN, GPIO_IN);
 
-  // Set initial serial transmit timer target
-  txtimer_target = time_us_32() + U_SERIALDELAY_3B; 
+  // Set initial serial timer targets
+  time_tx_target = time_us_32() + U_SERIALDELAY_3B; 
+  time_rx_target = time_us_32() + U_FULL_SECOND; 
 
   while(1) {
+
+    // Check for request for serial console  
+    // Repeating non-blocking reads is slow so instead we queue checks every now and then with timer.
+    if(time_reached(time_rx_target)) {
+      if(serial_read(0, serial_buffer, 1) > 0) {
+        if(serial_buffer[0] == '\r' || serial_buffer[0] == '\n') {
+          console(0);
+        }
+      }
+      time_rx_target = time_us_32() + U_FULL_SECOND;
+    }
+
     bool cts_pin = gpio_get(UART_CTS_PIN);
 
     // ### Check if mouse driver trying to initialize
@@ -175,7 +191,7 @@ int main() {
 
       tuh_task(); // tinyusb host task
  
-      if(time_reached(txtimer_target) || mouse.force_update) {
+      if(time_reached(time_tx_target) || mouse.force_update) {
         runtime_settings(&mouse);
 	input_sensitivity(&mouse);
 	update_mouse_state(&mouse);

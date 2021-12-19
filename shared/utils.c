@@ -19,7 +19,7 @@
 
 /*** Helper functions ****/
 
-const char * byte_to_bitstring(uint8_t val) {
+const char* byte_to_bitstring(uint8_t val) {
   static char buffer[9];
 
   for (int i = 0; 7 >= i; i++) {
