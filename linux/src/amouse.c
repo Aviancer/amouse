@@ -164,11 +164,9 @@ static inline void process_mouse_report(mouse_state_t *mouse, struct input_event
 	push_update(mouse, mouse->mmb);
 	break;
       case BTN_MIDDLE:
-	if(mouse_options.wheel) {
-	  mouse->mmb = ev->value;
-	  mouse->force_update = true;
-	  push_update(mouse, true); // Every time MMB changes (on or off), must send 4 bytes.
-	}
+	mouse->mmb = ev->value;
+	mouse->force_update = true;
+	push_update(mouse, true); // Every time MMB changes (on or off), must send 4 bytes.
 	break;
     }
   }
@@ -185,11 +183,9 @@ static inline void process_mouse_report(mouse_state_t *mouse, struct input_event
 	mouse->y = clampi(mouse->y, -36862, 36862);
 	break;
       case REL_WHEEL:
-	if(mouse_options.wheel) {
-	  mouse->wheel += ev->value;
-	  mouse->wheel = clampi(mouse->wheel, -63, 63);
-	  push_update(mouse, true);
-	}
+	mouse->wheel += ev->value;
+	mouse->wheel = clampi(mouse->wheel, -63, 63);
+	push_update(mouse, true);
 	break;
     }
     push_update(mouse, mouse->mmb);

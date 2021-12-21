@@ -80,7 +80,7 @@ static inline void process_mouse_report(mouse_state_t *mouse, hid_mouse_report_t
     mouse->rmb = test_mouse_button(p_report->buttons, MOUSE_BUTTON_RIGHT);
     push_update(mouse, mouse->mmb);
 
-    if(mouse_options.wheel && (button_changed_mask & MOUSE_BUTTON_MIDDLE)) {
+    if((button_changed_mask & MOUSE_BUTTON_MIDDLE)) {
       mouse->mmb = test_mouse_button(p_report->buttons, MOUSE_BUTTON_MIDDLE);
       push_update(mouse, true);
     }
@@ -98,7 +98,7 @@ static inline void process_mouse_report(mouse_state_t *mouse, hid_mouse_report_t
     mouse->y  = clampi(mouse->y, -36862, 36862);
     push_update(mouse, mouse->mmb);
   }
-  if(mouse_options.wheel && p_report->wheel) {
+  if(p_report->wheel) {
       mouse->wheel += p_report->wheel;
       mouse->wheel  = clampi(mouse->wheel, -63, 63);
       push_update(mouse, true);
