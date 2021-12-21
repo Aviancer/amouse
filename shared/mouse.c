@@ -23,7 +23,7 @@
 #ifdef __linux__
 #include <stdlib.h>
 #include <unistd.h> // TODO: replace with better than usleep()
-#include <stdio.h>  // DEBUG
+//#include <stdio.h>  // DEBUG
 #include "../linux/src/include/version.h"
 #include "../linux/src/include/serial.h"
 #else 
@@ -48,10 +48,12 @@ R"#( __ _   _ __  ___ _  _ ___ ___
 const char amouse_menu[] =
 R"#(1) Help/Usage
 2) Show current settings
-3) Set mouse wheel on/off
-4) Set sensitivity (1-20)
-5) Exit settings/Resume adapter
-0) Read or write settings (Flash)
+3) Set sensitivity (1-20)
+4) Set mouse protocol (0:No wheel 2:Wheel)
+5) Swap left/right buttons.
+6) Exit settings/Resume adapter
+0) [TBD] Read or write settings (Flash)
+   eg. to set sensitivity to 11, enter: 3 11
 )#";
 
 const char amouse_prompt[] = "amouse> ";
@@ -74,8 +76,14 @@ bool update_mouse_state(mouse_state_t *mouse) {
   int movement;
 
   // Set mouse button states    
-  mouse->state[0] |= (mouse->lmb << MOUSE_LMB_BIT);
-  mouse->state[0] |= (mouse->rmb << MOUSE_RMB_BIT);
+  if(mouse_options.swap_buttons) {
+    mouse->state[0] |= (mouse->rmb << MOUSE_LMB_BIT);
+    mouse->state[0] |= (mouse->lmb << MOUSE_RMB_BIT);
+  }
+  else {
+    mouse->state[0] |= (mouse->lmb << MOUSE_LMB_BIT);
+    mouse->state[0] |= (mouse->rmb << MOUSE_RMB_BIT);
+  }
   mouse->state[3] |= (mouse->mmb << MOUSE_MMB_BIT);
 
   // Clamp x, y, wheel inputs to values allowable by protocol.  
@@ -141,6 +149,27 @@ void push_update(mouse_state_t *mouse, bool full_packet) {
 
 /*** Serial console ***/
 
+// Integer to character array
+void itoa(int integer, char* intbuffer, uint max_digits) {
+  int i;
+  
+  memset(intbuffer, 0, max_digits); // Zero potential number space.
+
+  // Figure out number of digits, clamped to max.
+  int scratch = integer;
+  for(i=0; scratch > 0 && i < max_digits; i++) {
+    scratch /= 10;
+  }
+  if(integer == 0) { i = 1; }
+  i--; // Shift to zero indexed
+
+  for(; i >= 0 ; i--) { // Walk int backwards
+    intbuffer[i] = 0x30 + (integer % 10); // 0x30 = 0
+    integer /= 10;
+  }  
+}
+
+// Return type for scan_int()
 typedef struct scan_int_ret {
   bool found;
   int value;
@@ -152,6 +181,7 @@ typedef struct scan_int_ret {
 scan_int_t scan_int(uint8_t* buffer, uint i, uint scan_size, uint max_digits) {
   scan_int_t result;
 
+  bool abort = false;
   char intbuffer[6] = {0};  
   uint j=0;
   uint usable_size=5;
@@ -160,20 +190,36 @@ scan_int_t scan_int(uint8_t* buffer, uint i, uint scan_size, uint max_digits) {
   if(max_digits > sizeof(intbuffer) - 1) { max_digits = sizeof(intbuffer) - 1; }
 
   // Scan up to number
-  for(; i <= scan_size && (buffer[i] < '0' || buffer[i] > '9'); i++) {
-    ;
-  }
-  if(scan_size - i > 5) { usable_size = i + 5; }
-  // Copy until number end
-  for(; i <= usable_size && buffer[i] >= '0' && buffer[i] <= '9' && j < max_digits; i++) {
-    intbuffer[j] = buffer[i]; 
-    j++;
+  for(; !abort && i <= scan_size && (buffer[i] < '0' || buffer[i] > '9'); i++) {
+    // Abort if null byte found before number.
+    if(buffer[i] == '\0') { 
+      abort = true;
+      result.found = false;
+      result.value = -1;
+    }
   }
 
-  result.found  = (j > 0);
-  result.value  = atoi(intbuffer);
+  if(!abort) {
+    if(scan_size - i > 5) { usable_size = i + 5; }
+    // Copy until number end
+    for(; i <= usable_size && buffer[i] >= '0' && buffer[i] <= '9' && j < max_digits; i++) {
+      intbuffer[j] = buffer[i]; 
+      j++;
+    }
+
+    result.found  = (j > 0);
+    result.value  = atoi(intbuffer);
+  }
+
   result.offset = i; 
   return(result);
+}
+
+void console_printvar(int fd, char* prefix, char* variable, char* suffix) {
+  // Write until \0
+  serial_write_terminal(fd, (uint8_t*)prefix, 1024);
+  serial_write_terminal(fd, (uint8_t*)variable, 1024);
+  serial_write_terminal(fd, (uint8_t*)suffix, 1024);
 }
 
 void console_prompt(int fd) {
@@ -202,15 +248,20 @@ void console_backspace(uint8_t cmd_buffer[], char* found_ptr, uint* write_pos) {
   *write_pos = pwrite_pos;
 }
 
+// Serial console main
 void console(int fd) {
 
   uint write_pos = 0;
   int read_len = 0;
+
   scan_int_t scan_i;
+  char itoa_buffer[6] = {0}; // Re-usable buffer for converting ints to char arr
   
   memset(cmd_buffer, 0, CMD_BUFFER_LEN); // Clear command buffer if we get called multiple times.
 
   serial_write_terminal(fd, (uint8_t*)amouse_title, sizeof(amouse_title));
+  serial_write_terminal(fd, (uint8_t*)"\nv", 2);
+  serial_write_terminal(fd, (uint8_t*)V_FULL, sizeof(V_FULL));
   serial_write_terminal(fd, (uint8_t*)"\n", 1);
   serial_write_terminal(fd, (uint8_t*)amouse_menu, sizeof(amouse_menu));
   console_prompt(fd);
@@ -273,25 +324,42 @@ void console(int fd) {
 
       if(scan_i.found) {
 	switch(scan_i.value) {
-	  case 1:
+	  case 1: // Help
 	    serial_write_terminal(fd, (uint8_t*)amouse_menu, sizeof(amouse_menu));
 	    break;
-	  case 2:
-	    serial_write_terminal(fd, (uint8_t*)"Settings\n", 9);
+	  case 2: // Settings
+	    serial_write_terminal(fd, (uint8_t*)"[Settings]\n", 11);
+	    console_printvar(fd, "  Mouse wheel: ", (mouse_options.wheel) ? "Enabled" : "Disabled", "\n");
+	    itoa((int)(mouse_options.sensitivity * 10), itoa_buffer, sizeof(itoa_buffer) - 1);
+	    console_printvar(fd, "  Mouse sensitivity: ", itoa_buffer, "\n");
+	    console_printvar(fd, "  Mouse buttons: ", (mouse_options.swap_buttons) ? "Swapped" : "Not swapped", "\n");
 	    break;
-	  case 3:
-	    mouse_options.wheel = !mouse_options.wheel;
-	    serial_write_terminal(fd, (uint8_t*)"Toggle\n", 7);
-	    break;
-	  case 4:
+	  case 3: // Sensitivity
 	    scan_i = scan_int(cmd_buffer, scan_i.offset, CMD_BUFFER_LEN, 5);
-	    if(scan_i.found) {
+	    if(scan_i.found) { 
 	      mouse_options.sensitivity = clampf(((float)scan_i.value / 10), 0.1, 2.0);
 	    }
+	    itoa((int)(mouse_options.sensitivity * 10), itoa_buffer, sizeof(itoa_buffer) - 1);
+	    console_printvar(fd, "Mouse sensitivity set to ", itoa_buffer, ".\n");
 	    break;
-	  case 5:
+	  case 4: // Wheel proto on/off
+	    scan_i = scan_int(cmd_buffer, scan_i.offset, CMD_BUFFER_LEN, 1);
+	    if(scan_i.found) { mouse_options.wheel = clampi(scan_i.value, 0, 1); }
+	    else { mouse_options.wheel = !mouse_options.wheel; }
+	    console_printvar(fd, "Mouse wheel is now ", (mouse_options.wheel) ? "enabled" : "disabled", ". You may want to re-initialize OS mouse driver.\n");
+	    break;
+	  case 5: // Swap left/right buttons
+	    scan_i = scan_int(cmd_buffer, scan_i.offset, CMD_BUFFER_LEN, 1);
+	    if(scan_i.found) { mouse_options.swap_buttons = clampi(scan_i.value, 0, 1); }
+	    else { mouse_options.swap_buttons = !mouse_options.swap_buttons; }
+	    console_printvar(fd, "Mouse buttons are now ", (mouse_options.swap_buttons) ? "swapped" : "unswapped", ".\n");
+	    break;
+	  case 6: // Exit
 	    serial_write_terminal(fd, (uint8_t*)"Bye!\n", 5);
 	    return;
+	    break;
+	  case 0: // Write/load flash
+	    serial_write_terminal(fd, (uint8_t*)"Not yet implemented.\n", 22); 
 	    break;
 	  default:
 	    serial_write_terminal(fd, (uint8_t*)"Command not valid.\n", 19); 
@@ -303,6 +371,6 @@ void console(int fd) {
       console_prompt(fd);
     }
 
-    //usleep(1); // DEBUG
+    usleep(1); // DEBUG
   }
 }

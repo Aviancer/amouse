@@ -52,8 +52,9 @@ typedef struct mouse_state {
 
 // Struct for user settable mouse options
 typedef struct mouse_opts {
-  int wheel;
   float sensitivity; // Sensitivity coefficient
+  int wheel;
+  int swap_buttons;
 } mouse_opts_t;
 
 extern mouse_opts_t mouse_options; // Global options

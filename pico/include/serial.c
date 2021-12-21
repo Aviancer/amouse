@@ -79,7 +79,9 @@ int serial_write_terminal(int uart_id, uint8_t *buffer, int size) {
   int bytes=0;
   if(uart != NULL) {
     for(; bytes <= size; bytes++) {
-      if(buffer[bytes] == '\n') {
+      if(buffer[bytes] == '\0') { return bytes; }
+      // Convert LF to CRLF
+      else if(buffer[bytes] == '\n') {
 	uart_putc_raw(uart, '\r');
       }
       uart_putc_raw(uart, buffer[bytes]); 

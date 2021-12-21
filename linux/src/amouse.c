@@ -57,6 +57,7 @@ void showhelp(char *argv[]) {
 	 "  -w Disable mousewheel, switch to basic MS protocol\n" \
 	 "  -e Disable exclusive access to mouse\n" \
 	 "  -i Immediate ident mode, disables waiting for CTS pin\n" \
+	 "  -l Swap left and right buttons\n" \
 	 "  -d Print out debug information on mouse state\n", V_MAJOR, V_MINOR, V_REVISION, argv[0]);
 }
 
@@ -64,7 +65,7 @@ void parse_opts(int argc, char **argv, struct linux_opts *options) {
   int option_index = 0;
   int quit = 0;
 
-  while (( option_index = getopt(argc, argv, "hm:s:weid")) != -1) {
+  while (( option_index = getopt(argc, argv, "hm:s:wield")) != -1) {
     // Defaults
     mouse_options.wheel = 1;
     options->exclusive = 1;
@@ -83,11 +84,14 @@ void parse_opts(int argc, char **argv, struct linux_opts *options) {
       case 'w':
 	mouse_options.wheel = 0;
 	break;
+      case 'i':
+	options->immediate = 1; // Don't wait for CTS pin to ident
+	break;
       case 'e':
 	options->exclusive = 0; // Computer will also get mouse inputs.
 	break;
-      case 'i':
-	options->immediate = 1; // Don't wait for CTS pin to ident
+      case 'l':
+	mouse_options.swap_buttons = 1;
 	break;
       case 'd':
 	options->debug = 1; // Enable debug prints
