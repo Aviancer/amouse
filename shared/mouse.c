@@ -22,7 +22,6 @@
 
 #ifdef __linux__
 #include <stdlib.h>
-//#include <stdio.h>  // DEBUG
 #include "../linux/src/include/version.h"
 #include "../linux/src/include/serial.h"
 #include "../linux/src/include/wrappers.h"
@@ -58,6 +57,7 @@ R"#(1) Help/Usage
 )#";
 
 const char amouse_prompt[] = "amouse> ";
+const char amouse_bye[] = "Bye!\n    Never too late for dreams and play - fly!\n";
 
 uint8_t init_mouse_state[] = "\x40\x00\x00\x00"; // Our basic mouse packet (We send 3 or 4 bytes of it)
 
@@ -300,10 +300,6 @@ void console(int fd) {
     // Echo to console
     if(cmd_buffer[write_pos] != '\b') {
       if(write_pos < CMD_BUFFER_LEN - 1) {
-        /*uint8_t debugbuff[20] = {0}; // DEBUG
-        sprintf(debugbuff, "%d/%d\r\n", write_pos, CMD_BUFFER_LEN, cmd_buffer[write_pos]); // DEBUG
-        serial_write_terminal(fd, debugbuff, 1024); // DEBUG*/
-
         serial_write_terminal(fd, cmd_buffer + write_pos, sizeof(uint8_t) * read_len); 
       }
     }
@@ -375,7 +371,7 @@ void console(int fd) {
 	    console_printvar(fd, "Mouse buttons are now ", (mouse_options.swap_buttons) ? "swapped" : "unswapped", ".\n");
 	    break;
 	  case 6: // Exit
-	    serial_write_terminal(fd, (uint8_t*)"Bye!\n", 5);
+	    serial_write_terminal(fd, (uint8_t*)amouse_bye, sizeof(amouse_bye));
 	    return;
 	    break;
 	  case 0: // Write/load flash

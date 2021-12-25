@@ -16,5 +16,5 @@
 #include "wrappers.h"
 
 int a_usleep(useconds_t usec) {
-  return sleep(usec);
+  return usleep(usec);
 }
