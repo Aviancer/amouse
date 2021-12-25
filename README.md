@@ -34,11 +34,13 @@ Things you can configure (as of 1.3.0):
 - Store settings in non-volatile memory (Not yet implemented)
 
 Open a serial terminal program (kermit, etc) to the same COM port you connected the mouse to, use the following settings:
-- 1200 baud
-- 7 data bits
-- No parity
-- 1 stop bit
-- No hardware flow control
+```
+1200 baud
+7 data bits
+No parity
+1 stop bit
+No hardware flow control
+```
 
 Press enter to bring up the serial console, the adapter will switch to configuration mode and a menu will open. If you get scrambled characters, check all your terminal settings.
 For an example you can enter: 3 11<enter> to change the mouse sensitivity to 11 (1.1 in the above sensitivity scale).
