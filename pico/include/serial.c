@@ -66,7 +66,7 @@ int serial_write(int uart_id, uint8_t *buffer, int size) {
   uart_inst_t* uart = get_uart(uart_id);
   int bytes=0;
   if(uart != NULL) {
-    for(; bytes <= size; bytes++) {
+    for(; bytes < size; bytes++) {
       uart_putc_raw(uart, buffer[bytes]); 
     } 
   }
@@ -153,7 +153,7 @@ void mouse_ident(int uart_id, bool wheel_enabled) {
   //uint8_t pkt_intellimouse_intro[] = "\x4D\x5A"; // MZ
 
   if(wheel_enabled) {
-    serial_write(uart_id, pkt_intellimouse_intro, 2); // 2 byte intro is sufficient
+    serial_write(uart_id, pkt_intellimouse_intro, sizeof(pkt_intellimouse_intro)); // 2 byte intro is sufficient
   }
   else {
     serial_write(uart_id, pkt_intellimouse_intro, 1); // M for basic Microsoft proto. 

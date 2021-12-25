@@ -57,7 +57,7 @@ int led_state = 0;
 void queue_tx(mouse_state_t *mouse) {
   // Update timer target for next transmit
   // Use variable send rate depending on whether a 3 or 4 byte update was sent
-  if(mouse->update > 2) { time_tx_target = time_us_32() + U_SERIALDELAY_4B; }
+  if(mouse->update > 3) { time_tx_target = time_us_32() + U_SERIALDELAY_4B; }
   else                  { time_tx_target = time_us_32() + U_SERIALDELAY_3B; }
 }
 

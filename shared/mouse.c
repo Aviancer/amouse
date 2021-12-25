@@ -22,14 +22,15 @@
 
 #ifdef __linux__
 #include <stdlib.h>
-#include <unistd.h> // TODO: replace with better than usleep()
 //#include <stdio.h>  // DEBUG
 #include "../linux/src/include/version.h"
 #include "../linux/src/include/serial.h"
+#include "../linux/src/include/wrappers.h"
 #else 
 #include "pico/stdlib.h"
 #include "../pico/include/version.h"
 #include "../pico/include/serial.h"
+#include "../pico/include/wrappers.h"
 #endif 
 
 #include "mouse.h"
@@ -49,7 +50,7 @@ const char amouse_menu[] =
 R"#(1) Help/Usage
 2) Show current settings
 3) Set sensitivity (1-20)
-4) Set mouse protocol (0:No wheel 2:Wheel)
+4) Set mouse protocol (0:No wheel 1:Wheel)
 5) Swap left/right buttons.
 6) Exit settings/Resume adapter
 0) [TBD] Read or write settings (Flash)
@@ -72,7 +73,7 @@ uint8_t cmd_buffer[CMD_BUFFER_LEN + 1] = {0};
 /*** Shared mouse functions ***/
 
 bool update_mouse_state(mouse_state_t *mouse) {
-  if((mouse->update < 2) && (mouse->force_update == false)) { return(false); } // Minimum report size is 2 (3 bytes)
+  if((mouse->update < 3) && (mouse->force_update == false)) { return(false); } // Minimum report size is 3 bytes.
   int movement;
 
   // Set mouse button states    
@@ -142,12 +143,24 @@ void input_sensitivity(mouse_state_t *mouse) {
 
 // Make sure we don't clobber higher update requests with lower ones.
 void push_update(mouse_state_t *mouse, bool full_packet) {
-  if(full_packet || (mouse->update == 3)) { mouse->update = 3; }
-  else { mouse->update = 2; }
+  if((full_packet || (mouse->update == 4)) && mouse_options.wheel) { mouse->update = 4; }
+  else { mouse->update = 3; }
 }
 
 
 /*** Serial console ***/
+
+// Character array to unsigned integer
+uint atou(char* intbuffer, uint max_digits) {
+  uint integer = 0;
+
+  for(int i=0; i < max_digits && intbuffer[i] >= '0' && intbuffer[i] <= '9'; i++) {
+    integer *= 10;
+    integer += (intbuffer[i] - 0x30);
+  }
+
+  return integer;
+}
 
 // Integer to character array
 void itoa(int integer, char* intbuffer, uint max_digits) {
@@ -208,7 +221,7 @@ scan_int_t scan_int(uint8_t* buffer, uint i, uint scan_size, uint max_digits) {
     }
 
     result.found  = (j > 0);
-    result.value  = atoi(intbuffer);
+    result.value  = atou(intbuffer, 5);
   }
 
   result.offset = i; 
@@ -244,7 +257,10 @@ void console_backspace(uint8_t cmd_buffer[], char* found_ptr, uint* write_pos) {
     pread_pos++;
   }
   cmd_buffer[pwrite_pos] = '\0'; // Zero the backspace from the command buffer.
-  if(pwrite_pos > 0) { pwrite_pos--; }
+  if(pwrite_pos > 0) { 
+    pwrite_pos--;
+    cmd_buffer[pwrite_pos] = '\0'; // Zero removed character
+  }
   *write_pos = pwrite_pos;
 }
 
@@ -284,6 +300,10 @@ void console(int fd) {
     // Echo to console
     if(cmd_buffer[write_pos] != '\b') {
       if(write_pos < CMD_BUFFER_LEN - 1) {
+        /*uint8_t debugbuff[20] = {0}; // DEBUG
+        sprintf(debugbuff, "%d/%d\r\n", write_pos, CMD_BUFFER_LEN, cmd_buffer[write_pos]); // DEBUG
+        serial_write_terminal(fd, debugbuff, 1024); // DEBUG*/
+
         serial_write_terminal(fd, cmd_buffer + write_pos, sizeof(uint8_t) * read_len); 
       }
     }
@@ -371,6 +391,6 @@ void console(int fd) {
       console_prompt(fd);
     }
 
-    usleep(1); // DEBUG
+    a_usleep(1);
   }
 }

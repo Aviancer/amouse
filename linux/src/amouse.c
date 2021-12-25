@@ -54,7 +54,7 @@ void showhelp(char *argv[]) {
          "Usage: %s -m <mouse_input> -s <serial_output>\n\n" \
          "  -m <File> to read mouse input from (/dev/input/*)\n" \
          "  -s <File> to write to serial port with (/dev/tty*)\n" \
-	 "  -w Disable mousewheel, switch to basic MS protocol\n" \
+	 "  -w Disable mouse wheel, switch to basic MS protocol\n" \
 	 "  -e Disable exclusive access to mouse\n" \
 	 "  -i Immediate ident mode, disables waiting for CTS pin\n" \
 	 "  -l Swap left and right buttons\n" \
@@ -322,7 +322,7 @@ int main(int argc, char **argv) {
          
 	// Send updates
 	if(options->debug) { fprintf(stderr, "Sensitivity: %f\n", mouse_options.sensitivity); }
-        for(i=0; i <= mouse.update; i++) {
+        for(i=0; i < mouse.update; i++) {
           if(options->debug) {
 	    fprintf(stderr, "Time: %d.%d\n", (int)time_tx_target.tv_sec, (int)time_tx_target.tv_nsec);
             fprintf(stderr, "Sent(ev:%d) %d: %x\n", ev.code, i, mouse.state[i]);

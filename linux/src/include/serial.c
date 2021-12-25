@@ -129,7 +129,7 @@ void wait_pin_state(int fd, int flag, int desired_state) {
   }
 }
 
-void mouse_ident(int fd, int wheel_enabled) {
+void mouse_ident(int fd, bool wheel_enabled) {
   /*** Microsoft Mouse proto negotiation ***/
   /*if(!immediate) {
     wait_pin_state(fd, TIOCM_CTS | TIOCM_DSR, 0); // Computers RTS & DTR
