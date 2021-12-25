@@ -39,10 +39,24 @@ int serial_write(int fd, uint8_t *buffer, int size) {
   return bytes;
 }
 
+/* Write to serial out with enforced order, convert terminal characters */
+int serial_write_terminal(int fd, uint8_t *buffer, int size) { 
+  int bytes=0;
+  for(; bytes < size; bytes++) {
+    if(buffer[bytes] == '\0') { return bytes; }
+    // Convert LF to CRLF
+    else if(buffer[bytes] == '\n') {
+      write(fd, "\r", 1);
+    }
+    write(fd, &buffer[bytes], 1);
+  }  
+  return bytes;
+}
+
 // Non-blocking read
 int serial_read(int fd, uint8_t *buffer, int size) {
   int bytes=0;
-  for(int i=0; i <= size; i++) {
+  for(int i=0; i < size; i++) {
     if(read(fd, &buffer[bytes], 1) > 0) { bytes++; }
     else { break; }
   }
@@ -115,7 +129,7 @@ void wait_pin_state(int fd, int flag, int desired_state) {
   }
 }
 
-void mouse_ident(int fd, int wheel_enabled) {
+void mouse_ident(int fd, bool wheel_enabled) {
   /*** Microsoft Mouse proto negotiation ***/
   /*if(!immediate) {
     wait_pin_state(fd, TIOCM_CTS | TIOCM_DSR, 0); // Computers RTS & DTR
@@ -146,19 +160,26 @@ void timespec_diff(struct timespec *ts1, struct timespec *ts2, struct timespec *
   }
 }
 
-struct timespec get_target_time(uint32_t delay) {
+bool timespec_reached(struct timespec *target) {
   struct timespec time;
   clock_gettime(CLOCK_MONOTONIC, &time);
 
+  if(time.tv_sec < target->tv_sec) { return false; }
+  if(time.tv_sec > target->tv_sec) { return true; }
+  return(time.tv_nsec >= target->tv_nsec);
+}
+
+struct timespec get_target_time(uint8_t seconds, uint32_t nseconds) {
+  struct timespec time, target;
+  clock_gettime(CLOCK_MONOTONIC, &time);
+  
   // 1200 baud (bits/s) is 133.333333333... bytes/s
   // 44.44.. updates per second with 3 bytes.
   // 33.25.. updates per second with 4 bytes.
-  // ~0.0075 seconds per byte, target time calculated for 4 bytes.
+  // ~0.0075 seconds per byte, target time calculated for 4 bytes
+  
+  target.tv_sec  = time.tv_sec + seconds + ((time.tv_nsec + nseconds) / NS_FULL_SECOND); 
+  target.tv_nsec = (time.tv_nsec + nseconds) % NS_FULL_SECOND; 
 
-  uint32_t now_nsec; 
-  now_nsec = time.tv_nsec;
-  time.tv_nsec = (time.tv_nsec + delay) % NS_FULL_SECOND;
-  if(time.tv_nsec < now_nsec) { time.tv_sec++; }
-
-  return time;
+  return(target);
 }

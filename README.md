@@ -15,13 +15,35 @@ The adapter has been tested to work against DOS and Windows 95 serial mouse driv
 
 # Controls
 
-## Sensitivity control
+## On-the-fly sensitivity control
 
 Once the mouse is initialized - hold down both left and right mouse buttons. Then additionally:
 - Scroll mouse wheel up to add sensitivity
 - Scroll mouse wheel down to reduce sensitivity
 
 One mouse wheel click adds/reduces sensitivity by a factor of 0.2, you can adjust sensitivity between 0.2 and 2.0. 
+
+## Serial console for configuration
+
+A serial console feature is provided for more advanced configuration of the features of the mouse adapter, allowing for more than what is practical with just mouse button shortcuts. The serial console uses the same COM port used for acting as a serial adapter and you can toggle between the modes easily. This way the computer can be used to configure the adapter and no additional hardware is required, on Linux you can of course also use direct cli arguments.
+
+Things you can configure (as of 1.3.0):
+- Sensitivity
+- Serial mouse protocol
+- Swap left and right buttons
+- Store settings in non-volatile memory (Not yet implemented)
+
+Open a serial terminal program (kermit, etc) to the same COM port you connected the mouse to, use the following settings:
+- 1200 baud
+- 7 data bits
+- No parity
+- 1 stop bit
+- No hardware flow control
+
+Press enter to bring up the serial console, the adapter will switch to configuration mode and a menu will open. If you get scrambled characters, check all your terminal settings.
+For an example you can enter: 3 11<enter> to change the mouse sensitivity to 11 (1.1 in the above sensitivity scale).
+
+Enter the exit command to the serial console after you are done configuring amouse, returning it to adapter mode. If you changed protocols, you may need to re-initialize the OS mouse driver.
 
 # Linux version
 
@@ -73,7 +95,9 @@ If your serial cable/adapter isn't fully pinned (missing a CTS pin), you may use
 
 Provides a stand-alone adapter running on a Raspberry Pico microcontroller for converting from USB to Serial Mouse.
 
-Currently supports emulating a wheeled Microsoft Mouse, with all three buttons and wheel working.
+Currently supports emulating the following protocols:
+- Wheeled Microsoft Mouse, with all three buttons and wheel working. 
+- Two button Microsoft Mouse, without wheel.
 
 ## Requirements
 - Basic soldering skills
@@ -88,7 +112,8 @@ Currently supports emulating a wheeled Microsoft Mouse, with all three buttons a
 - Serial header with RX, TX and CTS available
 - USB-A header to solder on, or alternatively a USB micro to USB-A host adapter for connecting a USB mouse to the Pico USB port
 - Few bits of wire/board to make connections
-- A suitable serial cable for connecting from the adapter to the computers serial port
+- A suitable serial cable for connecting from the adapter to the computers serial port (see diagram)
+- A way to provide 5v power to the Pico (a USB charger or battery could be ideal)
 
 ## Build & install
 ```
@@ -114,7 +139,6 @@ Provided that everything is connected up correctly, the adapter will auto-detect
 
 # Planned future features
 
-- Switching between at least wheeled and non-wheeled Microsoft mouse protocols (Already implemented in Linux version)
 - Storing settings like sensitivity and used mouse protocol in a non-volatile manner.
 
 # FAQ

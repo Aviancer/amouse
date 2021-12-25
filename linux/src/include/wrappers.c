@@ -13,34 +13,8 @@
  * if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#ifndef SERIAL_H_
-#define SERIAL_H_
+#include "wrappers.h"
 
-#include <termios.h> // POSIX terminal control defs
-#include <stdbool.h>
-
-int serial_write(int fd, uint8_t *buffer, int size);
-
-int serial_write_terminal(int fd, uint8_t *buffer, int size);
-
-int serial_read(int fd, uint8_t *buffer, int size);
-
-int get_pin(int fd, int flag);
-
-int enable_pin(int fd, int flag);
-
-int disable_pin(int fd, int flag);
-
-int setup_tty(int fd, speed_t baudrate);
-
-void wait_pin_state(int fd, int flag, int desired_state);
-
-void mouse_ident(int fd, bool wheel);
-
-void timespec_diff(struct timespec *ts1, struct timespec *ts2, struct timespec *result);
-
-bool timespec_reached(struct timespec *target);
-
-struct timespec get_target_time(uint8_t seconds, uint32_t nseconds);
-
-#endif // SERIAL_H_
+int a_usleep(useconds_t usec) {
+  return usleep(usec);
+}

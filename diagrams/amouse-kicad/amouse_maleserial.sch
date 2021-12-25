@@ -4,9 +4,9 @@ EELAYER END
 $Descr A4 11693 8268
 encoding utf-8
 Sheet 1 1
-Title "Anachro Mouse, USB to Serial Mouse Adapter (Female)"
-Date "2021-12-15"
-Rev "3"
+Title "Anachro Mouse, USB to Serial Mouse Adapter (Male)"
+Date "2021-07-27"
+Rev "2"
 Comp "github.com/Aviancer/amouse"
 Comment1 "twitter.com/skyvian"
 Comment2 "Licensed under TAPR Open Hardware License v1.0 (www.tapr.org/OHL)"
@@ -60,16 +60,32 @@ F 3 "" H 5200 2800 50  0001 C CNN
 	1    5200 2800
 	1    0    0    -1  
 $EndComp
-Text GLabel 9100 3700 2    50   Output ~ 0
+Text GLabel 9100 3900 2    50   Output ~ 0
 RS232_TX
-Text GLabel 9050 3900 2    50   Input ~ 0
+Text GLabel 9050 4100 2    50   Input ~ 0
 RS232_RX
 Text GLabel 3500 3000 0    50   Input ~ 0
 TTL_RX
 Text GLabel 3500 2900 0    50   Output ~ 0
 TTL_TX
+$Comp
+L Connector:DB9_Male_MountingHoles J2
+U 1 1 60DB81E1
+P 9800 3900
+F 0 "J2" H 9980 3809 50  0000 L CNN
+F 1 "DB9_Male_MountingHoles" H 9350 2950 50  0000 L CNN
+F 2 "" H 9800 3900 50  0001 C CNN
+F 3 " ~" H 9800 3900 50  0001 C CNN
+	1    9800 3900
+	1    0    0    -1  
+$EndComp
 Text GLabel 9500 3800 0    50   Output ~ 0
 RS232_CTS
+NoConn ~ 9500 4300
+NoConn ~ 9500 4200
+NoConn ~ 9500 4000
+NoConn ~ 9500 3700
+NoConn ~ 9500 3600
 Text GLabel 3500 3200 0    50   Input ~ 0
 TTL_CTS
 NoConn ~ 3500 3100
@@ -200,7 +216,11 @@ Wire Wire Line
 Wire Wire Line
 	8850 4500 8850 3800
 Wire Wire Line
+	8850 3800 9500 3800
+Wire Wire Line
 	8050 4500 8850 4500
+Wire Wire Line
+	8050 3900 9500 3900
 Wire Wire Line
 	5500 3900 6450 3900
 Wire Wire Line
@@ -363,6 +383,12 @@ F 3 "" H 2150 3250 50  0001 C CNN
 $EndComp
 Wire Wire Line
 	2150 3400 2150 3250
+Wire Wire Line
+	8050 4300 8750 4300
+Wire Wire Line
+	8750 4300 8750 4100
+Wire Wire Line
+	8750 4100 9500 4100
 $Comp
 L power:GND #PWR0109
 U 1 1 60DC3ECA
@@ -401,8 +427,6 @@ Wire Wire Line
 Connection ~ 7450 2200
 Wire Wire Line
 	7450 2200 7650 2200
-Text Notes 7650 2350 0    50   ~ 0
-0.1 uF
 Text GLabel 2150 3700 2    50   BiDi ~ 0
 USB_D-
 Text GLabel 2150 3600 2    50   BiDi ~ 0
@@ -426,36 +450,6 @@ F 3 "" H 7450 2500 50  0001 C CNN
 	1    7450 2500
 	1    0    0    -1  
 $EndComp
-$Comp
-L Connector:DB9_Female_MountingHoles J?
-U 1 1 61A2C531
-P 9800 3900
-F 0 "J?" H 9980 3902 50  0000 L CNN
-F 1 "DB9_Female_MountingHoles" H 9250 4600 50  0000 L CNN
-F 2 "" H 9800 3900 50  0001 C CNN
-F 3 " ~" H 9800 3900 50  0001 C CNN
-	1    9800 3900
-	1    0    0    -1  
-$EndComp
-Wire Wire Line
-	8750 3900 8750 3700
-Wire Wire Line
-	8050 4300 8950 4300
-Wire Wire Line
-	8950 4300 8950 3900
-NoConn ~ 9500 4300
-NoConn ~ 9500 4200
-NoConn ~ 9500 4100
-NoConn ~ 9500 4000
-NoConn ~ 9500 3600
-Wire Wire Line
-	8750 3900 8050 3900
-Wire Wire Line
-	8750 3700 9500 3700
-Wire Wire Line
-	8850 3800 9500 3800
-Wire Wire Line
-	8950 3900 9500 3900
-Text Notes 9250 3050 0    39   ~ 0
-Use straight through serial cable.\nCan also be directly connected to \ncomputers serial port.
+Text Notes 7650 2350 0    50   ~ 0
+0.1 uF
 $EndSCHEMATC

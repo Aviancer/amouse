@@ -19,6 +19,11 @@
 
 #include <stdbool.h>
 
+
+/*** Shared definitions ***/
+
+extern const char amouse_title[];
+
 /* Protocol definitions */
 #define MOUSE_LMB_BIT 5 // Defines << shift for bit position
 #define MOUSE_RMB_BIT 4
@@ -43,8 +48,16 @@ typedef struct mouse_state {
   int x, y, wheel;
   int update; // How many bytes to send
   bool lmb, rmb, mmb, force_update;
-  float sensitivity; // Sensitivity coefficient
 } mouse_state_t;
+
+// Struct for user settable mouse options
+typedef struct mouse_opts {
+  float sensitivity; // Sensitivity coefficient
+  bool wheel;
+  bool swap_buttons;
+} mouse_opts_t;
+
+extern mouse_opts_t mouse_options; // Global options
 
 // States of mouse init request from PC
 enum PC_INIT_STATES {
@@ -54,6 +67,8 @@ enum PC_INIT_STATES {
 };
 
 /* Functions */
+
+void console(int fd);
 
 bool update_mouse_state(mouse_state_t *mouse);
 

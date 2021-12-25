@@ -34,30 +34,17 @@
 // Technically could support multiple mice connected to the same system if we kept more mouse states in memory.
 
 
-/*** Program parameters ***/ 
-
-// Struct for storing pointers to dynamically allocated memory containing options.
-typedef struct opts {
-  int wheel;
-} opts_t;
-
-void set_opts(struct opts *options) {
-  options->wheel = 1;
-}
-
-
 /*** Global state variables ****/
 
-// Set default options, support mouse wheel.
-opts_t options = { .wheel=1 };
-
 extern mouse_state_t mouse; // Needs to be available for serial functions.
-mouse_state_t mouse; // int values default to 0 
+mouse_state_t mouse;        // int values default to 0 
 
-static uint32_t txtimer_target; // Serial transmit timer target time
+static uint32_t time_tx_target; // Serial transmit timers target time
+static uint32_t time_rx_target; // Serial receive timers target time
+
+uint8_t serial_buffer[2] = {0}; // Buffer for inputs from serial port.
 
 // Aggregate movements before sending
-//CFG_TUSB_MEM_SECTION static hid_mouse_report_t usb_mouse_report;
 CFG_TUSB_MEM_SECTION static hid_mouse_report_t usb_mouse_report_prev;
 
 // DEBUG
@@ -70,8 +57,8 @@ int led_state = 0;
 void queue_tx(mouse_state_t *mouse) {
   // Update timer target for next transmit
   // Use variable send rate depending on whether a 3 or 4 byte update was sent
-  if(mouse->update > 2) { txtimer_target = time_us_32() + U_SERIALDELAY_4B; }
-  else                  { txtimer_target = time_us_32() + U_SERIALDELAY_3B; }
+  if(mouse->update > 3) { time_tx_target = time_us_32() + U_SERIALDELAY_4B; }
+  else                  { time_tx_target = time_us_32() + U_SERIALDELAY_3B; }
 }
 
 
@@ -93,7 +80,7 @@ static inline void process_mouse_report(mouse_state_t *mouse, hid_mouse_report_t
     mouse->rmb = test_mouse_button(p_report->buttons, MOUSE_BUTTON_RIGHT);
     push_update(mouse, mouse->mmb);
 
-    if(options.wheel && (button_changed_mask & MOUSE_BUTTON_MIDDLE)) {
+    if((button_changed_mask & MOUSE_BUTTON_MIDDLE)) {
       mouse->mmb = test_mouse_button(p_report->buttons, MOUSE_BUTTON_MIDDLE);
       push_update(mouse, true);
     }
@@ -111,7 +98,7 @@ static inline void process_mouse_report(mouse_state_t *mouse, hid_mouse_report_t
     mouse->y  = clampi(mouse->y, -36862, 36862);
     push_update(mouse, mouse->mmb);
   }
-  if(options.wheel && p_report->wheel) {
+  if(p_report->wheel) {
       mouse->wheel += p_report->wheel;
       mouse->wheel  = clampi(mouse->wheel, -63, 63);
       push_update(mouse, true);
@@ -138,7 +125,10 @@ int main() {
   //enable_pins(UART_RTS_BIT | UART_DTR_BIT);
   reset_mouse_state(&mouse);
   mouse.pc_state = CTS_UNINIT;
-  mouse.sensitivity = 1.0;
+
+  // Set default options, support mouse wheel.
+  mouse_options.wheel=1;
+  mouse_options.sensitivity=1.0;
 
   // Initialize USB
   tusb_init();
@@ -151,10 +141,23 @@ int main() {
   gpio_init(UART_CTS_PIN); 
   gpio_set_dir(UART_CTS_PIN, GPIO_IN);
 
-  // Set initial serial transmit timer target
-  txtimer_target = time_us_32() + U_SERIALDELAY_3B; 
+  // Set initial serial timer targets
+  time_tx_target = time_us_32() + U_SERIALDELAY_3B; 
+  time_rx_target = time_us_32() + U_FULL_SECOND; 
 
   while(1) {
+
+    // Check for request for serial console  
+    // Repeating non-blocking reads is slow so instead we queue checks every now and then with timer.
+    if(time_reached(time_rx_target)) {
+      if(serial_read(0, serial_buffer, 1) > 0) {
+        if(serial_buffer[0] == '\r' || serial_buffer[0] == '\n') {
+          console(0);
+        }
+      }
+      time_rx_target = time_us_32() + U_FULL_SECOND;
+    }
+
     bool cts_pin = gpio_get(UART_CTS_PIN);
 
     // ### Check if mouse driver trying to initialize
@@ -166,7 +169,7 @@ int main() {
     // ### Mouse initiaizing request detected
     if(!cts_pin && mouse.pc_state == CTS_LOW_INIT) {
       mouse.pc_state = CTS_TOGGLED;
-      mouse_ident(0, options.wheel);
+      mouse_ident(0, mouse_options.wheel);
     }
 
     /*** Mouse update loop ***/
@@ -176,7 +179,7 @@ int main() {
 
       tuh_task(); // tinyusb host task
  
-      if(time_reached(txtimer_target) || mouse.force_update) {
+      if(time_reached(time_tx_target) || mouse.force_update) {
         runtime_settings(&mouse);
 	input_sensitivity(&mouse);
 	update_mouse_state(&mouse);
