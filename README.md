@@ -5,6 +5,9 @@
  / _` | | '  \/ _ \ || (_-</ -_)
  \__,_| |_|_|_\___/\_,_/__/\___====____
 ```
+
+![Picture of a black box with USB and serial connector](images/amouse-box.jpg?raw=true)
+
 Anachro Mouse, a usb to serial mouse adapter.
 
 This software will convert USB mouse inputs to Microsoft serial mouse protocol for retro hardware. This way you can use a Raspberry Pico, a Raspberry Pi or an existing modern PC/laptop to mouse on your retro system.
@@ -24,6 +27,9 @@ Once the mouse is initialized - hold down both left and right mouse buttons. The
 One mouse wheel click adds/reduces sensitivity by a factor of 0.2, you can adjust sensitivity between 0.2 and 2.0. 
 
 ## Serial console for configuration
+
+<video src="https://user-images.githubusercontent.com/80006672/147396198-eb4ab52f-2a5a-4799-a7e4-8fb58865289f.mp4" controls="controls" style="max-width: 720px;">
+</video>
 
 A serial console feature is provided for more advanced configuration of the features of the mouse adapter, allowing for more than what is practical with just mouse button shortcuts. The serial console uses the same COM port used for acting as a serial adapter and you can toggle between the modes easily. This way the computer can be used to configure the adapter and no additional hardware is required, on Linux you can of course also use direct cli arguments.
 
@@ -100,6 +106,8 @@ Provides a stand-alone adapter running on a Raspberry Pico microcontroller for c
 Currently supports emulating the following protocols:
 - Wheeled Microsoft Mouse, with all three buttons and wheel working. 
 - Two button Microsoft Mouse, without wheel.
+
+![Electronic schematic of the adapter](diagrams/amouse-schematic.png?raw=true)
 
 ## Requirements
 - Basic soldering skills
