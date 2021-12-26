@@ -48,7 +48,7 @@ No parity
 No hardware flow control
 ```
 
-`Press enter` to bring up the serial console, the adapter will switch to configuration mode and a menu will open. If you get scrambled characters, check all your terminal settings.
+Press `enter` to bring up the serial console, the adapter will switch to configuration mode and a menu will open. If you get scrambled characters, check all your terminal settings.
 For an example you can enter: `3 11<enter>` to change the mouse sensitivity to 11 (1.1 in the above sensitivity scale).
 
 Enter the exit command to the serial console after you are done configuring amouse, returning it to adapter mode. If you changed protocols, you may need to re-initialize the OS mouse driver.
