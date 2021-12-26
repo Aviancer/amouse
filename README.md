@@ -105,6 +105,8 @@ Currently supports emulating the following protocols:
 - Wheeled Microsoft Mouse, with all three buttons and wheel working. 
 - Two button Microsoft Mouse, without wheel.
 
+![Electronic schematic of the adapter](diagrams/amouse-schematic.png?raw=true)
+
 ## Requirements
 - Basic soldering skills
 - Working C building environment
