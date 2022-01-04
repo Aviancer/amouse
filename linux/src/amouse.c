@@ -241,7 +241,7 @@ int main(int argc, char **argv) {
  
   // Initialize serial parameters 
   setup_tty(serial_fd, (speed_t)B1200);
-  enable_pin(serial_fd, TIOCM_RTS | TIOCM_DTR);
+  disable_pin(serial_fd, TIOCM_RTS | TIOCM_DTR); // We're not a modem so make sure pins low.
 
   fcntl (0, F_SETFL, O_NONBLOCK); // Nonblock 0=stdin
   setvbuf(stdout, NULL, _IONBF, 0); // Unbuffer stdout
@@ -272,7 +272,6 @@ int main(int argc, char **argv) {
     mouse.pc_state = CTS_TOGGLED; // Bypass CTS detection, send events straight away.
   }
 
-  
   /*** Main loop ***/
 
   while(1) {
@@ -293,23 +292,26 @@ int main(int argc, char **argv) {
 
     // Mouse handling
 
-    bool pc_pins = get_pin(serial_fd, TIOCM_CTS | TIOCM_DSR);
+    bool pc_cts = get_pin(serial_fd, TIOCM_CTS);
 
-    if(!pc_pins) { // Computers RTS & DTR low 
-      mouse.pc_state = CTS_LOW_INIT;
+    if(!pc_cts) { // Computers RTS low, only pin we care about for MS drivers, etc.
+      if(mouse.pc_state == CTS_UNINIT) { mouse.pc_state = CTS_LOW_INIT; }
+      else if (mouse.pc_state == CTS_TOGGLED || mouse.pc_state == CTS_LOW_RUN) { mouse.pc_state = CTS_LOW_RUN; }
     }
 
     // Mouse initiaizing request detected
-    if(pc_pins && mouse.pc_state == CTS_LOW_INIT) {
+    if(pc_cts && (mouse.pc_state != CTS_TOGGLED && mouse.pc_state != CTS_UNINIT)) {
       if(options->debug) {
-	aprint("Computers RTS & DTR pins set low, identifying as mouse.");
+	aprint("Computers RTS pin toggled, identifying as mouse.");
       }
       mouse.pc_state = CTS_TOGGLED;
       mouse_ident(serial_fd, mouse_options.wheel);
       aprint("Mouse initialized. Good to go!");
     }
 
-    if((mouse.pc_state == CTS_TOGGLED) && 
+    // Transmit only once we are initialized at least once. Unlike in DOS, Windows drivers will set CTS pin 
+    // low after init which would inhibit transmitting. We will trust the driver to re-init if needed.
+    if((mouse.pc_state > CTS_LOW_INIT) && 
       (libevdev_next_event(mouse_dev, LIBEVDEV_READ_FLAG_NORMAL, &ev) == LIBEVDEV_READ_STATUS_SUCCESS)) {
 
       process_mouse_report(&mouse, &ev, options);
@@ -332,9 +334,9 @@ int main(int argc, char **argv) {
         }
 	if(options->debug) { printf("\n"); }
 
-	// Use variable send rate depending on whether middle mouse button pressed or not (3 or 4 byte updates)
-	if(mouse.mmb) { time_tx_target = get_target_time(0, NS_SERIALDELAY_4B); }
-	else          { time_tx_target = get_target_time(0, NS_SERIALDELAY_3B); }
+	// Use different send rate depending on protocol used (3 or 4 byte)
+	if(mouse_options.wheel) { time_tx_target = get_target_time(0, NS_SERIALDELAY_4B); }
+	else                    { time_tx_target = get_target_time(0, NS_SERIALDELAY_3B); }
 
 	reset_mouse_state(&mouse);
       }
