@@ -15,6 +15,7 @@
 */
 
 #include "pico/stdlib.h"
+#include "pico/multicore.h"
 
 #include "serial.h"
 #include "../shared/mouse.h"
@@ -60,14 +61,12 @@ void mouse_serial_init(int uart_id) {
   }
 }
 
-// Does not currently confirm that TX FIFO is writable.
 int serial_write(int uart_id, uint8_t *buffer, int size) {
-  uart_inst_t* uart = get_uart(uart_id);
+  // For now uart is what gets set in Core 1 loop.
   int bytes=0;
-  if(uart != NULL) {
-    for(; bytes <= size; bytes++) {
-      uart_putc_raw(uart, buffer[bytes]);
-    } 
+  for(; bytes < size; bytes++) {
+    // Offload serial write to Core 1
+    multicore_fifo_push_blocking(buffer[bytes]);
   }
   return bytes;
 }
@@ -85,18 +84,20 @@ int serial_write(int uart_id, uint8_t *buffer, int size) {
 
 /* Write to serial out with enforced order, convert terminal characters */
 int serial_write_terminal(int uart_id, uint8_t *buffer, int size) { 
-  uart_inst_t* uart = get_uart(uart_id);
+  // For now uart is what gets set in Core 1 loop.
+  //uart_inst_t* uart = get_uart(uart_id);
   int bytes=0;
-  if(uart != NULL) {
-    for(; bytes <= size; bytes++) {
-      if(buffer[bytes] == '\0') { return bytes; }
-      // Convert LF to CRLF
-      else if(buffer[bytes] == '\n') {
-	uart_putc_raw(uart, '\r');
-      }
-      uart_putc_raw(uart, buffer[bytes]); 
-    } 
-  }
+  for(int pos=0; pos <= size; pos++) {
+    if(buffer[pos] == '\0') { return bytes; }
+    // Convert LF to CRLF
+    else if(buffer[pos] == '\n') {
+      multicore_fifo_push_blocking((uint8_t)'\r');
+      bytes++;
+    }
+    // Offload serial write to Core 1
+    multicore_fifo_push_blocking(buffer[pos]);
+    bytes++;
+  } 
   return bytes;
 }
 

@@ -21,6 +21,8 @@
 #include <time.h>
 #include "stdbool.h"
 #include "pico/stdlib.h"
+#include "pico/multicore.h"
+#include "hardware/irq.h"
 
 #include "include/version.h"
 #include "include/serial.h"
@@ -111,11 +113,38 @@ extern void collect_mouse_report(hid_mouse_report_t* p_report) {
 }
 
 
+/*** Core 1 thread to offload serial writes ***/
+
+void core1_interrupt_handler() {
+  while (multicore_fifo_rvalid()){
+    uint8_t byte = multicore_fifo_pop_blocking();
+    uart_putc_raw(uart0, byte); // TODO: Make UART configurable.
+  }
+  multicore_fifo_clear_irq(); // Clear interrupt
+}
+
+void core1_tightloop() {
+  // Configure Core 1 interrupt
+  multicore_fifo_clear_irq();
+  irq_set_exclusive_handler(SIO_IRQ_PROC1, core1_interrupt_handler);
+  irq_set_enabled(SIO_IRQ_PROC1, true);
+
+  // Loop while waiting for interrupt
+  while(1) {
+    tight_loop_contents();
+  }
+}
+
+
 /*** Main init & loop ***/
 
 int main() {
+
   // Initialize serial parameters 
   mouse_serial_init(0); // uart0
+
+  // Should be launched before any interrupts
+  multicore_launch_core1(core1_tightloop);
 
   // Set up initial state 
   //enable_pins(UART_RTS_BIT | UART_DTR_BIT);
@@ -179,6 +208,8 @@ int main() {
         gpio_put(LED_PIN, true);
 	led_state = true;
       }
+
+      tuh_task(); // tinyusb host task
  
       if(time_reached(time_tx_target) || mouse.force_update) {
         runtime_settings(&mouse);
@@ -186,11 +217,10 @@ int main() {
 	update_mouse_state(&mouse);
 
 	queue_tx(&mouse); // Update next serial timing
+
         serial_write(0, mouse.state, mouse.update);
         reset_mouse_state(&mouse);
       }
-
-      tuh_task(); // tinyusb host task // TODO: Test shifted from above to here.
 
     }
     //sleep_us(1);

@@ -48,7 +48,7 @@ R"#( __ _   _ __  ___ _  _ ___ ___
 const char amouse_menu[] =
 R"#(1) Help/Usage
 2) Show current settings
-3) Set sensitivity (1-20)
+3) Set sensitivity (1-25)
 4) Set mouse protocol (0:No wheel 1:Wheel)
 5) Swap left/right buttons.
 6) Exit settings/Resume adapter
@@ -130,7 +130,7 @@ void runtime_settings(mouse_state_t *mouse) {
     if(mouse->wheel != 0) {
       if(mouse->wheel < 0) { mouse_options.sensitivity -= 0.2; }
       else { mouse_options.sensitivity += 0.2; }
-      mouse_options.sensitivity = clampf(mouse_options.sensitivity, 0.2, 2.0);
+      mouse_options.sensitivity = clampf(mouse_options.sensitivity, 0.2, 2.5);
     }
 
     if(mouse->mmb) {
@@ -360,7 +360,7 @@ void console(int fd) {
 	  case 3: // Sensitivity
 	    scan_i = scan_int(cmd_buffer, scan_i.offset, CMD_BUFFER_LEN, 5);
 	    if(scan_i.found) { 
-	      mouse_options.sensitivity = clampf(((float)scan_i.value / 10), 0.1, 2.0);
+	      mouse_options.sensitivity = clampf(((float)scan_i.value / 10), 0.1, 2.5);
 	    }
 	    itoa((int)(mouse_options.sensitivity * 10), itoa_buffer, sizeof(itoa_buffer) - 1);
 	    console_printvar(fd, "Mouse sensitivity set to ", itoa_buffer, ".\n");
