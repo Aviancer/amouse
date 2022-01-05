@@ -47,18 +47,17 @@ uint8_t serial_buffer[2] = {0}; // Buffer for inputs from serial port.
 // Aggregate movements before sending
 CFG_TUSB_MEM_SECTION static hid_mouse_report_t usb_mouse_report_prev;
 
-// DEBUG
 const uint LED_PIN = PICO_DEFAULT_LED_PIN;
-int led_state = 0;
+bool led_state = false;
 
 
 /*** Timing ***/
 
 void queue_tx(mouse_state_t *mouse) {
   // Update timer target for next transmit
-  // Use variable send rate depending on whether a 3 or 4 byte update was sent
-  if(mouse->update > 3) { time_tx_target = time_us_32() + U_SERIALDELAY_4B; }
-  else                  { time_tx_target = time_us_32() + U_SERIALDELAY_3B; }
+  // Use different send rate depending on protocol used (3 or 4 bytes)
+  if(mouse_options.wheel) { time_tx_target = time_us_32() + U_SERIALDELAY_4B; }
+  else                    { time_tx_target = time_us_32() + U_SERIALDELAY_3B; }
 }
 
 
@@ -78,11 +77,9 @@ static inline void process_mouse_report(mouse_state_t *mouse, hid_mouse_report_t
 
     mouse->lmb = test_mouse_button(p_report->buttons, MOUSE_BUTTON_LEFT);
     mouse->rmb = test_mouse_button(p_report->buttons, MOUSE_BUTTON_RIGHT);
-    push_update(mouse, mouse->mmb);
 
     if((button_changed_mask & MOUSE_BUTTON_MIDDLE)) {
       mouse->mmb = test_mouse_button(p_report->buttons, MOUSE_BUTTON_MIDDLE);
-      push_update(mouse, true);
     }
   }
     
@@ -91,18 +88,17 @@ static inline void process_mouse_report(mouse_state_t *mouse, hid_mouse_report_t
   if(p_report->x) {
     mouse->x += p_report->x;
     mouse->x  = clampi(mouse->x, -36862, 36862); 
-    push_update(mouse, mouse->mmb);
   }
   if(p_report->y) {
     mouse->y += p_report->y;
     mouse->y  = clampi(mouse->y, -36862, 36862);
-    push_update(mouse, mouse->mmb);
   }
   if(p_report->wheel) {
       mouse->wheel += p_report->wheel;
       mouse->wheel  = clampi(mouse->wheel, -63, 63);
-      push_update(mouse, true);
   }
+
+  push_update(mouse, mouse_options.wheel); // TODO
 
   // Update previous mouse state
   usb_mouse_report_prev = *p_report;
@@ -162,22 +158,27 @@ int main() {
 
     // ### Check if mouse driver trying to initialize
     if(cts_pin) { // Computers RTS is low, with MAX3232 this shows reversed as high instead? Check spec.
-      mouse.pc_state = CTS_LOW_INIT;
-      gpio_put(LED_PIN, false);
+      if(mouse.pc_state == CTS_UNINIT) { mouse.pc_state = CTS_LOW_INIT; }
+      else if(mouse.pc_state == CTS_TOGGLED) { mouse.pc_state = CTS_LOW_RUN; }
     }
 
-    // ### Mouse initiaizing request detected
-    if(!cts_pin && mouse.pc_state == CTS_LOW_INIT) {
+    // ### Mouse initializing request detected
+    if(!cts_pin && (mouse.pc_state != CTS_UNINIT && mouse.pc_state != CTS_TOGGLED)) {
       mouse.pc_state = CTS_TOGGLED;
       mouse_ident(0, mouse_options.wheel);
+      gpio_put(LED_PIN, false);
+      led_state = false;
     }
 
     /*** Mouse update loop ***/
-    if(mouse.pc_state == CTS_TOGGLED) {
-      //led_state ^= 1; // Flip state between 0/1 // DEBUG
-      gpio_put(LED_PIN, true);
 
-      tuh_task(); // tinyusb host task
+    // Transmit only once we are initialized at least once. Unlike in DOS, Windows drivers will set CTS pin 
+    // low after init which would inhibit transmitting. We will trust the driver to re-init if needed.
+    if(mouse.pc_state > CTS_LOW_INIT) {
+      if(!led_state) {
+        gpio_put(LED_PIN, true);
+	led_state = true;
+      }
  
       if(time_reached(time_tx_target) || mouse.force_update) {
         runtime_settings(&mouse);
@@ -188,6 +189,8 @@ int main() {
         serial_write(0, mouse.state, mouse.update);
         reset_mouse_state(&mouse);
       }
+
+      tuh_task(); // tinyusb host task // TODO: Test shifted from above to here.
 
     }
     //sleep_us(1);

@@ -17,18 +17,18 @@
 #include "pico/stdlib.h"
 
 #include "serial.h"
+#include "../shared/mouse.h"
 
 // Map for iterating through each bit (index) for pin (value)  
 // Should be updated to reflect UART_..._PIN values.
 const int UART_BITS2PINS[] = {0,1,3,4,5,6};
 const uint UART_BITS2PINS_LENGTH = 6;
 
-uint8_t pkt_intellimouse_intro[] = {0x4D,0x5A};
-
 #define BAUD_RATE 1200
 #define DATA_BITS 7
 #define STOP_BITS 1
 #define PARITY UART_PARITY_NONE
+
 
 /*** Serial comms ***/
 
@@ -60,18 +60,28 @@ void mouse_serial_init(int uart_id) {
   }
 }
 
-// TODO: Size does not always match if mixing null terminated and not packets.
 // Does not currently confirm that TX FIFO is writable.
-int serial_write(int uart_id, uint8_t *buffer, int size) { 
+int serial_write(int uart_id, uint8_t *buffer, int size) {
   uart_inst_t* uart = get_uart(uart_id);
   int bytes=0;
   if(uart != NULL) {
-    for(; bytes < size; bytes++) {
-      uart_putc_raw(uart, buffer[bytes]); 
+    for(; bytes <= size; bytes++) {
+      uart_putc_raw(uart, buffer[bytes]);
     } 
   }
   return bytes;
 }
+
+// Closer to hardware write method, not working yet.
+/*int serial_write(int uart_id, uint8_t *buffer, int size) {
+  uart_inst_t* uart = get_uart(uart_id);
+  for (size_t i = 0; i < size; ++i) {
+      while (!uart_is_writable(uart))
+          tight_loop_contents();
+      uart_get_hw(uart)->dr = *buffer++;
+  }
+  return size;
+}*/
 
 /* Write to serial out with enforced order, convert terminal characters */
 int serial_write_terminal(int uart_id, uint8_t *buffer, int size) { 
@@ -145,20 +155,10 @@ void mouse_ident(int uart_id, bool wheel_enabled) {
  
   sleep_us(14); 
 
-  /* Byte1:Always M
-   * Byte2:[None]=Microsoft 3=Logitech Z=MicrosoftWheel  */
-  //uint8_t logitech[] = "\x4D\x33";
-  //uint8_t microsoft[] = "\x4D";
-  /* IntelliMouse: MZ@... */
-  //uint8_t pkt_intellimouse_intro[] = "\x4D\x5A"; // MZ
-
   if(wheel_enabled) {
-    serial_write(uart_id, pkt_intellimouse_intro, sizeof(pkt_intellimouse_intro)); // 2 byte intro is sufficient
+    serial_write(uart_id, pkt_intellimouse_intro, pkt_intellimouse_intro_len); // Microsoft Intellimouse with wheel.
   }
   else {
     serial_write(uart_id, pkt_intellimouse_intro, 1); // M for basic Microsoft proto. 
   }
-
-  // sleep_us(63); // Simulate mouse init delay
-  //write(fd, &logitech[1], 1); // Not enabled currently
 }

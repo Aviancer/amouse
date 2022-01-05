@@ -71,6 +71,9 @@ void parse_opts(int argc, char **argv, struct linux_opts *options) {
     options->exclusive = 1;
 
     switch(option_index) {
+      case 'h':
+        showhelp(argv); exit(0);
+        break;
       case 'm':
         options->mousepath = strndup(optarg, 4096); // Max path size is 4095, plus a null byte
         break;
@@ -78,9 +81,6 @@ void parse_opts(int argc, char **argv, struct linux_opts *options) {
         options->serialpath = strndup(optarg, 4096);
         break;
 
-      case 'h':
-        showhelp(argv); exit(0);
-        break;
       case 'w':
 	mouse_options.wheel = 0;
 	break;
@@ -296,11 +296,11 @@ int main(int argc, char **argv) {
 
     if(!pc_cts) { // Computers RTS low, only pin we care about for MS drivers, etc.
       if(mouse.pc_state == CTS_UNINIT) { mouse.pc_state = CTS_LOW_INIT; }
-      else if (mouse.pc_state == CTS_TOGGLED || mouse.pc_state == CTS_LOW_RUN) { mouse.pc_state = CTS_LOW_RUN; }
+      else if(mouse.pc_state == CTS_TOGGLED) { mouse.pc_state = CTS_LOW_RUN; }
     }
 
     // Mouse initiaizing request detected
-    if(pc_cts && (mouse.pc_state != CTS_TOGGLED && mouse.pc_state != CTS_UNINIT)) {
+    if(pc_cts && (mouse.pc_state != CTS_UNINIT && mouse.pc_state != CTS_TOGGLED)) {
       if(options->debug) {
 	aprint("Computers RTS pin toggled, identifying as mouse.");
       }

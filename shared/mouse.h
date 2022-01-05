@@ -24,6 +24,9 @@
 
 extern const char amouse_title[];
 
+extern uint8_t pkt_intellimouse_intro[];
+extern int pkt_intellimouse_intro_len;
+
 /* Protocol definitions */
 #define MOUSE_LMB_BIT 5 // Defines << shift for bit position
 #define MOUSE_RMB_BIT 4
@@ -31,6 +34,7 @@ extern const char amouse_title[];
 
 // Delay between data packets for 1200 baud
 #define U_FULL_SECOND 1000000L      // 1s in microseconds
+#define U_SERIALDELAY_1B  7500      // 1 byte
 #define U_SERIALDELAY_3B  22700     // 3 bytes (microseconds)
 #define U_SERIALDELAY_4B  30000     // 4 bytes (microseconds)
 // 1200 baud (bits/s) is 133.333333333... bytes/s
@@ -38,6 +42,7 @@ extern const char amouse_title[];
 // 33.25.. updates per second with 4 bytes.
 // ~0.0075 seconds per byte, target time calculated for 4 bytes.
 #define NS_FULL_SECOND    1000000000L // 1s in nanoseconds
+#define NS_SERIALDELAY_1B   7500000   // 1 byte
 #define NS_SERIALDELAY_3B   22700000  // 3 bytes
 #define NS_SERIALDELAY_4B   30000000  // 4 bytes
 
@@ -63,7 +68,8 @@ extern mouse_opts_t mouse_options; // Global options
 enum PC_INIT_STATES {
   CTS_UNINIT   = 0, // Initial state
   CTS_LOW_INIT = 1, // CTS pin has been set low, wait for high.
-  CTS_TOGGLED  = 2  // CTS was low, now high -> do ident.
+  CTS_TOGGLED  = 2, // CTS was low, now high -> do ident.
+  CTS_LOW_RUN  = 3  // CTS drops low post-initialization, Windows behavior.
 };
 
 /* Functions */
