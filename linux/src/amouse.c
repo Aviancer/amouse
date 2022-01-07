@@ -256,6 +256,7 @@ int main(int argc, char **argv) {
   mouse_state_t mouse;
   mouse.pc_state = CTS_UNINIT;
   mouse_options.sensitivity = 1.0;
+  mouse_options.protocol = PROTO_MSWHEEL;
   reset_mouse_state(&mouse); // Set packet memory to initial state
 
   // Set timers

@@ -49,7 +49,8 @@ const char amouse_menu[] =
 R"#(1) Help/Usage
 2) Show current settings
 3) Set sensitivity (1-25)
-4) Set mouse protocol (0:No wheel 1:Wheel)
+4) Set mouse protocol (0-2)
+   (0:MS two-button 1: Logitech three-button 2: MS wheel)
 5) Swap left/right buttons.
 6) Exit settings/Resume adapter
 0) [TBD] Read or write settings (Flash)
@@ -60,6 +61,16 @@ const char amouse_prompt[] = "amouse> ";
 const char amouse_bye[] = "Bye!\n    Never too late for dreams and play - fly!\n";
 
 uint8_t init_mouse_state[] = "\x40\x00\x00\x00"; // Our basic mouse packet (We send 3 or 4 bytes of it)
+
+// Define available mouse protocols
+mouse_proto_t mouse_protocol[3] =
+{
+// Name           Intro Len Btn Wheel  ReportLen
+  {"MS 2 Button", "M",  1,  2,  false, 3}, // MS_2BUTTON = 0
+  {"Logitech",    "M3", 2,  3,  false, 3}, // LOGITECH   = 1, report is 3-4
+  {"MS Wheeled",  "MZ", 2,  3,  true,  4}  // MS_WHEELED = 2
+};
+
 
 // Full Serial Mouse intro with PnP information (Microsoft IntelliMouse)
 uint8_t pkt_intellimouse_intro[] = {0x4D,0x5A,0x40,0x00,0x00,0x00,0x08,0x01,0x24,0x2d,0x33,0x28,0x10,0x10,0x10,0x11,
@@ -80,7 +91,7 @@ uint8_t cmd_buffer[CMD_BUFFER_LEN + 1] = {0};
 /*** Shared mouse functions ***/
 
 bool update_mouse_state(mouse_state_t *mouse) {
-  if((mouse->update < 3) && (mouse->force_update == false)) { return(false); } // Minimum report size is 3 bytes.
+  //if((mouse->update < 3) && (mouse->force_update == false)) { return(false); } // Minimum report size is 3 bytes.
   int movement;
 
   // Set mouse button states    
@@ -92,12 +103,10 @@ bool update_mouse_state(mouse_state_t *mouse) {
     mouse->state[0] |= (mouse->lmb << MOUSE_LMB_BIT);
     mouse->state[0] |= (mouse->rmb << MOUSE_RMB_BIT);
   }
-  mouse->state[3] |= (mouse->mmb << MOUSE_MMB_BIT);
 
   // Clamp x, y, wheel inputs to values allowable by protocol.  
   mouse->x     = clampi(mouse->x, -127, 127);
   mouse->y     = clampi(mouse->y, -127, 127);
-  mouse->wheel = clampi(mouse->wheel, -15, 15);
 
   // Update aggregated mouse movement state
   movement = mouse->x & 0xc0; // Get 2 upper bits of X movement
@@ -108,7 +117,24 @@ bool update_mouse_state(mouse_state_t *mouse) {
   mouse->state[0] = mouse->state[0] | (movement >> 4);
   mouse->state[2] = mouse->state[2] | (mouse->y & 0x3f);
 
-  mouse->state[3] = mouse->state[3] | (-mouse->wheel & 0x0f); // 127(negatives) when scrolling up, 1(positives) when scrolling down.
+  // Protocol specific handling
+  switch(mouse_options.protocol) {
+    case PROTO_LOGITECH: 
+      if(mouse->mmb) {
+	mouse->state[3] = 0x20;
+      }
+      // MMB release gets also sent as 4 byte packet (push_update on mmb change).
+      break;
+    case PROTO_MSWHEEL: 
+      mouse->wheel = clampi(mouse->wheel, -15, 15);
+      mouse->state[3] |= (mouse->mmb << MOUSE_MMB_BIT);
+      mouse->state[3] = mouse->state[3] | (-mouse->wheel & 0x0f); // 127(negatives) when scrolling up, 1(positives) when scrolling down.
+      mouse->update = mouse_protocol[mouse_options.protocol].report_len;
+      break;
+    default:
+      // Get protocol default report length
+      mouse->update = mouse_protocol[mouse_options.protocol].report_len;
+  }
 
   return(true);
 }
@@ -150,7 +176,7 @@ void input_sensitivity(mouse_state_t *mouse) {
 
 // Make sure we don't clobber higher update requests with lower ones.
 void push_update(mouse_state_t *mouse, bool full_packet) {
-  if(full_packet || mouse_options.wheel) { mouse->update = 4; }
+  if(full_packet || mouse->update > 3) { mouse->update = 4; }
   else { mouse->update = 3; }
 }
 
@@ -352,7 +378,7 @@ void console(int fd) {
 	    break;
 	  case 2: // Settings
 	    serial_write_terminal(fd, (uint8_t*)"[Settings]\n", 11);
-	    console_printvar(fd, "  Mouse wheel: ", (mouse_options.wheel) ? "Enabled" : "Disabled", "\n");
+	    console_printvar(fd, "  Mouse protocol: ", mouse_protocol[mouse_options.protocol].name, "\n");
 	    itoa((int)(mouse_options.sensitivity * 10), itoa_buffer, sizeof(itoa_buffer) - 1);
 	    console_printvar(fd, "  Mouse sensitivity: ", itoa_buffer, "\n");
 	    console_printvar(fd, "  Mouse buttons: ", (mouse_options.swap_buttons) ? "Swapped" : "Not swapped", "\n");
@@ -365,11 +391,11 @@ void console(int fd) {
 	    itoa((int)(mouse_options.sensitivity * 10), itoa_buffer, sizeof(itoa_buffer) - 1);
 	    console_printvar(fd, "Mouse sensitivity set to ", itoa_buffer, ".\n");
 	    break;
-	  case 4: // Wheel proto on/off
+	  case 4: // Mouse protocol
 	    scan_i = scan_int(cmd_buffer, scan_i.offset, CMD_BUFFER_LEN, 1);
-	    if(scan_i.found) { mouse_options.wheel = clampi(scan_i.value, 0, 1); }
-	    else { mouse_options.wheel = !mouse_options.wheel; }
-	    console_printvar(fd, "Mouse wheel is now ", (mouse_options.wheel) ? "enabled" : "disabled", ". You may want to re-initialize OS mouse driver.\n");
+	    if(scan_i.found) { mouse_options.protocol = clampi(scan_i.value, 0, 2); }
+	    //else { mouse_options.wheel = !mouse_options.wheel; }
+	    console_printvar(fd, "Mouse protocol set to ", mouse_protocol[mouse_options.protocol].name, ". You may want to re-initialize OS mouse driver.\n");
 	    break;
 	  case 5: // Swap left/right buttons
 	    scan_i = scan_int(cmd_buffer, scan_i.offset, CMD_BUFFER_LEN, 1);

@@ -82,7 +82,7 @@ int serial_write(int uart_id, uint8_t *buffer, int size) {
   return size;
 }*/
 
-/* Write to serial out with enforced order, convert terminal characters */
+/* Write to serial out with convert terminal characters */
 int serial_write_terminal(int uart_id, uint8_t *buffer, int size) { 
   // For now uart is what gets set in Core 1 loop.
   //uart_inst_t* uart = get_uart(uart_id);
@@ -152,14 +152,19 @@ void wait_pin_state(int flag, int desired_state) {
 }
 
 void mouse_ident(int uart_id, bool wheel_enabled) {
-  /*** Microsoft Mouse proto negotiation ***/
+  /*** Mouse proto negotiation ***/
  
   sleep_us(14); 
 
-  if(wheel_enabled) {
+  if(mouse_options.protocol == PROTO_MSWHEEL) {
     serial_write(uart_id, pkt_intellimouse_intro, pkt_intellimouse_intro_len); // Microsoft Intellimouse with wheel.
   }
   else {
-    serial_write(uart_id, pkt_intellimouse_intro, 1); // M for basic Microsoft proto. 
+    serial_write(
+      uart_id,
+      mouse_protocol[mouse_options.protocol].serial_ident,
+      mouse_protocol[mouse_options.protocol].serial_ident_len
+    );
   }
+
 }

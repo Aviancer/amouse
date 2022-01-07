@@ -32,6 +32,23 @@ extern int pkt_intellimouse_intro_len;
 #define MOUSE_RMB_BIT 4
 #define MOUSE_MMB_BIT 4 // Shift 4 times in 4th byte
 
+typedef struct mouse_proto {
+  char    name[12];
+  uint8_t serial_ident[2]; // M, M3, MZ..
+  int     serial_ident_len;
+  int     buttons;
+  bool    wheel;
+  int     report_len;
+} mouse_proto_t;
+
+extern mouse_proto_t mouse_protocol[3]; // Global options
+
+enum MOUSE_PROTOCOLS {
+  PROTO_MS2BUTTON = 0, // 2 buttons, 3 bytes
+  PROTO_LOGITECH  = 1, // 3 buttons, 3-4 bytes
+  PROTO_MSWHEEL   = 2  // 3 buttons, wheel, 4 bytes.
+};
+
 // Delay between data packets for 1200 baud
 #define U_FULL_SECOND 1000000L      // 1s in microseconds
 #define U_SERIALDELAY_1B  7500      // 1 byte
@@ -57,6 +74,7 @@ typedef struct mouse_state {
 
 // Struct for user settable mouse options
 typedef struct mouse_opts {
+  int protocol;
   float sensitivity; // Sensitivity coefficient
   bool wheel;
   bool swap_buttons;

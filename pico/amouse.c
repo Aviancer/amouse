@@ -79,9 +79,11 @@ static inline void process_mouse_report(mouse_state_t *mouse, hid_mouse_report_t
 
     mouse->lmb = test_mouse_button(p_report->buttons, MOUSE_BUTTON_LEFT);
     mouse->rmb = test_mouse_button(p_report->buttons, MOUSE_BUTTON_RIGHT);
+    push_update(mouse, mouse->mmb);
 
     if((button_changed_mask & MOUSE_BUTTON_MIDDLE)) {
       mouse->mmb = test_mouse_button(p_report->buttons, MOUSE_BUTTON_MIDDLE);
+      push_update(mouse, true);
     }
   }
     
@@ -98,9 +100,10 @@ static inline void process_mouse_report(mouse_state_t *mouse, hid_mouse_report_t
   if(p_report->wheel) {
       mouse->wheel += p_report->wheel;
       mouse->wheel  = clampi(mouse->wheel, -63, 63);
+      push_update(mouse, true);
   }
 
-  push_update(mouse, mouse_options.wheel); // TODO
+  push_update(mouse, mouse->mmb);
 
   // Update previous mouse state
   usb_mouse_report_prev = *p_report;
@@ -152,6 +155,7 @@ int main() {
   mouse.pc_state = CTS_UNINIT;
 
   // Set default options, support mouse wheel.
+  mouse_options.protocol = PROTO_MSWHEEL;
   mouse_options.wheel=1;
   mouse_options.sensitivity=1.0;
 

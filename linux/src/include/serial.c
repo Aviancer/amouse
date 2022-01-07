@@ -124,12 +124,15 @@ void wait_pin_state(int fd, int flag, int desired_state) {
 }
 
 void mouse_ident(int fd, bool wheel_enabled) {
-  
-  if(wheel_enabled) {
+  if(mouse_options.protocol == PROTO_MSWHEEL) {
     write(fd, &pkt_intellimouse_intro, pkt_intellimouse_intro_len);
   }
   else {
-    serial_write(fd, pkt_intellimouse_intro, 1); // M for basic Microsoft proto. 
+    write(
+      fd, 
+      mouse_protocol[mouse_options.protocol].serial_ident,
+      mouse_protocol[mouse_options.protocol].serial_ident_len
+    );
   }
 }
 
