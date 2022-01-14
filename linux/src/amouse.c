@@ -166,7 +166,9 @@ static inline void process_mouse_report(mouse_state_t *mouse, struct input_event
       case BTN_MIDDLE:
 	mouse->mmb = ev->value;
 	mouse->force_update = true;
-	push_update(mouse, true); // Every time MMB changes (on or off), must send 4 bytes.
+	if(mouse_protocol[mouse_options.protocol].buttons > 2) { 
+	  push_update(mouse, true); // Every time MMB changes (on or off), must send 4 bytes.
+	} 
 	break;
     }
   }
@@ -177,18 +179,21 @@ static inline void process_mouse_report(mouse_state_t *mouse, struct input_event
       case REL_X:
 	mouse->x += ev->value;
 	mouse->x = clampi(mouse->x, -36862, 36862);
+        push_update(mouse, mouse->mmb);
 	break;
       case REL_Y:
 	mouse->y += ev->value;
 	mouse->y = clampi(mouse->y, -36862, 36862);
+        push_update(mouse, mouse->mmb);
 	break;
       case REL_WHEEL:
 	mouse->wheel += ev->value;
 	mouse->wheel = clampi(mouse->wheel, -63, 63);
-	push_update(mouse, true);
+	if(mouse_protocol[mouse_options.protocol].wheel) {
+	  push_update(mouse, true);
+	}
 	break;
     }
-    push_update(mouse, mouse->mmb);
   }
 }
 
@@ -252,7 +257,7 @@ int main(int argc, char **argv) {
 
   
   // Aggregate movements before sending
-  struct timespec time_rx_target, time_tx_target;
+  struct timespec time_rx_target, time_tx_target, timeout_console;
   mouse_state_t mouse;
   mouse.pc_state = CTS_UNINIT;
   mouse_options.sensitivity = 1.0;
@@ -262,6 +267,7 @@ int main(int argc, char **argv) {
   // Set timers
   time_tx_target = get_target_time(0, NS_SERIALDELAY_3B);
   time_rx_target = get_target_time(1, 0);
+  timeout_console = timespec_null();
   
   printf("%s\n\n", amouse_title);
   aprint("Waiting for PC to initialize mouse driver..");
@@ -274,18 +280,24 @@ int main(int argc, char **argv) {
   }
 
   /*** Main loop ***/
+  bool pc_cts = false;
 
   while(1) {
 
-    // Check for request for serial console  
+    // Check for request for serial console (two enter presses)
     // Repeating non-blocking reads is slow so instead we queue checks every now and then with timer.
     if(timespec_reached(&time_rx_target)) {
       if(serial_read(serial_fd, serial_buffer, 1) > 0) {
 	if(serial_buffer[0] == '\r' || serial_buffer[0] == '\n') {
-	  aprint("Console requested from serial line, suspending adapter.");
-	  console(serial_fd);
-	  aprint("Serial console closed, resuming adapter.");
+          if(!timespec_reached(&timeout_console)) { // Check for consecutive enters.
+	    aprint("Console requested from serial line, suspending adapter.");
+	    console(serial_fd);
+	    aprint("Serial console closed, resuming adapter.");
+	    timeout_console = timespec_null();
+          }
+	  else { timeout_console = get_target_time(2, 0); } 
 	}
+        else { timeout_console = timespec_null(); } // Expire timeout instantly on other characters.
       }
       time_rx_target = get_target_time(1, 0); 
     }
@@ -293,7 +305,7 @@ int main(int argc, char **argv) {
 
     // Mouse handling
 
-    bool pc_cts = get_pin(serial_fd, TIOCM_CTS);
+    pc_cts = get_pin(serial_fd, TIOCM_CTS);
 
     if(!pc_cts) { // Computers RTS low, only pin we care about for MS drivers, etc.
       if(mouse.pc_state == CTS_UNINIT) { mouse.pc_state = CTS_LOW_INIT; }
@@ -336,8 +348,8 @@ int main(int argc, char **argv) {
 	if(options->debug) { printf("\n"); }
 
 	// Use different send rate depending on protocol used (3 or 4 byte)
-	if(mouse_options.wheel) { time_tx_target = get_target_time(0, NS_SERIALDELAY_4B); }
-	else                    { time_tx_target = get_target_time(0, NS_SERIALDELAY_3B); }
+	if(mouse.update > 3) { time_tx_target = get_target_time(0, NS_SERIALDELAY_4B); }
+	else                  { time_tx_target = get_target_time(0, NS_SERIALDELAY_3B); }
 
 	reset_mouse_state(&mouse);
       }

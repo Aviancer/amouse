@@ -50,7 +50,7 @@ R"#(1) Help/Usage
 2) Show current settings
 3) Set sensitivity (1-25)
 4) Set mouse protocol (0-2)
-   (0:MS two-button 1: Logitech three-button 2: MS wheel)
+   Proto(0:MS two-button 1: Logitech three-button 2: MS wheel)
 5) Swap left/right buttons.
 6) Exit settings/Resume adapter
 0) [TBD] Read or write settings (Flash)
@@ -123,7 +123,7 @@ bool update_mouse_state(mouse_state_t *mouse) {
       if(mouse->mmb) {
 	mouse->state[3] = 0x20;
       }
-      // MMB release gets also sent as 4 byte packet (push_update on mmb change).
+      // Note: Implicit, MMB release gets also sent as 4 byte packet (push_update on mmb change).
       break;
     case PROTO_MSWHEEL: 
       mouse->wheel = clampi(mouse->wheel, -15, 15);

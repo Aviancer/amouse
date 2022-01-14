@@ -43,4 +43,6 @@ bool timespec_reached(struct timespec *target);
 
 struct timespec get_target_time(uint8_t seconds, uint32_t nseconds);
 
+struct timespec timespec_null();
+
 #endif // SERIAL_H_
