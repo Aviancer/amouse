@@ -65,12 +65,14 @@ void parse_opts(int argc, char **argv, struct linux_opts *options) {
   int option_index = 0;
   int quit = 0;
 
+  // Defaults
+  mouse_options.wheel = 1;
+  options->exclusive = 1;
+
   while (( option_index = getopt(argc, argv, "hm:s:wield")) != -1) {
-    // Defaults
-    mouse_options.wheel = 1;
-    options->exclusive = 1;
 
     switch(option_index) {
+      case '?':
       case 'h':
         showhelp(argv); exit(0);
         break;
@@ -80,7 +82,6 @@ void parse_opts(int argc, char **argv, struct linux_opts *options) {
       case 's':
         options->serialpath = strndup(optarg, 4096);
         break;
-
       case 'w':
 	mouse_options.wheel = 0;
 	break;
