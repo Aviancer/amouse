@@ -258,7 +258,7 @@ int main(int argc, char **argv) {
 
   
   // Aggregate movements before sending
-  struct timespec time_rx_target, time_tx_target, timeout_console;
+  struct timespec time_rx_target, time_tx_target;
   mouse_state_t mouse;
   mouse.pc_state = CTS_UNINIT;
   mouse_options.sensitivity = 1.0;
@@ -268,7 +268,6 @@ int main(int argc, char **argv) {
   // Set timers
   time_tx_target = get_target_time(0, NS_SERIALDELAY_3B);
   time_rx_target = get_target_time(1, 0);
-  timeout_console = timespec_null();
   
   printf("%s\n\n", amouse_title);
   aprint("Waiting for PC to initialize mouse driver..");
@@ -285,20 +284,15 @@ int main(int argc, char **argv) {
 
   while(1) {
 
-    // Check for request for serial console (two enter presses)
+    // Check for request for serial console
     // Repeating non-blocking reads is slow so instead we queue checks every now and then with timer.
     if(timespec_reached(&time_rx_target)) {
       if(serial_read(serial_fd, serial_buffer, 1) > 0) {
-	if(serial_buffer[0] == '\r' || serial_buffer[0] == '\n') {
-          if(!timespec_reached(&timeout_console)) { // Check for consecutive enters.
-	    aprint("Console requested from serial line, suspending adapter.");
-	    console(serial_fd);
-	    aprint("Serial console closed, resuming adapter.");
-	    timeout_console = timespec_null();
-          }
-	  else { timeout_console = get_target_time(2, 0); } 
+	if(serial_buffer[0] == '\b') {
+	  aprint("Console requested from serial line, suspending adapter.");
+	  console(serial_fd);
+	  aprint("Serial console closed, resuming adapter.");
 	}
-        else { timeout_console = timespec_null(); } // Expire timeout instantly on other characters.
       }
       time_rx_target = get_target_time(1, 0); 
     }

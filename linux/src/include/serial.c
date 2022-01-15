@@ -168,9 +168,3 @@ struct timespec get_target_time(uint8_t seconds, uint32_t nseconds) {
 
   return(target);
 }
-
-struct timespec timespec_null() {
-  struct timespec null = { };
-  return null;
-}
-

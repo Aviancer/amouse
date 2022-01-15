@@ -43,7 +43,6 @@ mouse_state_t mouse;        // int values default to 0
 
 static uint32_t time_tx_target;  // Serial transmit timers target time
 static uint32_t time_rx_target;  // Serial receive timers target time
-static uint32_t timeout_console; // Timeout for serial console to trigger
 
 uint8_t serial_buffer[2] = {0}; // Buffer for inputs from serial port.
 
@@ -178,24 +177,18 @@ int main() {
   // Set initial serial timer targets
   time_tx_target = time_us_32() + U_SERIALDELAY_3B; 
   time_rx_target = time_us_32() + U_FULL_SECOND; 
-  timeout_console = 0;
 
   bool cts_pin = false;
 
   while(1) {
 
-    // Check for request for serial console (two enter presses)
+    // Check for request for serial console
     // Repeating non-blocking reads is slow so instead we queue checks every now and then with timer.
     if(time_reached(time_rx_target)) {
       if(serial_read(0, serial_buffer, 1) > 0) {
-        if(serial_buffer[0] == '\r' || serial_buffer[0] == '\n') {
-	  if(!time_reached(timeout_console)) { // Check for consecutive enters.
+        if(serial_buffer[0] == '\b') {
 	    console(0);
-	    timeout_console = time_us_32();
-	  }
-	  else { timeout_console = time_us_32() + (U_FULL_SECOND * 2); }
         }
-	else { timeout_console = time_us_32(); } // Reset on any other input
       }
       time_rx_target = time_us_32() + U_FULL_SECOND;
     }
