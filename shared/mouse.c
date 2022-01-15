@@ -66,9 +66,9 @@ uint8_t init_mouse_state[] = "\x40\x00\x00\x00"; // Our basic mouse packet (We s
 mouse_proto_t mouse_protocol[3] =
 {
 // Name           Intro Len Btn Wheel  ReportLen
-  {"MS 2 Button", "M",  1,  2,  false, 3}, // MS_2BUTTON = 0
+  {"MS 2-button", "M",  1,  2,  false, 3}, // MS_2BUTTON = 0
   {"Logitech",    "M3", 2,  3,  false, 3}, // LOGITECH   = 1, report is 3-4
-  {"MS Wheeled",  "MZ", 2,  3,  true,  4}  // MS_WHEELED = 2
+  {"MS wheeled",  "MZ", 2,  3,  true,  4}  // MS_WHEELED = 2
 };
 
 
