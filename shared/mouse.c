@@ -91,7 +91,7 @@ uint8_t cmd_buffer[CMD_BUFFER_LEN + 1] = {0};
 /*** Shared mouse functions ***/
 
 bool update_mouse_state(mouse_state_t *mouse) {
-  //if((mouse->update < 3) && (mouse->force_update == false)) { return(false); } // Minimum report size is 3 bytes.
+  if((mouse->update < 3) && (mouse->force_update == false)) { return(false); } // Minimum report size is 3 bytes.
   int movement;
 
   // Set mouse button states    
@@ -105,8 +105,8 @@ bool update_mouse_state(mouse_state_t *mouse) {
   }
 
   // Clamp x, y, wheel inputs to values allowable by protocol.  
-  mouse->x     = clampi(mouse->x, -127, 127);
-  mouse->y     = clampi(mouse->y, -127, 127);
+  mouse->x = clampi(mouse->x, -127, 127);
+  mouse->y = clampi(mouse->y, -127, 127);
 
   // Update aggregated mouse movement state
   movement = mouse->x & 0xc0; // Get 2 upper bits of X movement

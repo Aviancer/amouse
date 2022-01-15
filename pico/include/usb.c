@@ -65,13 +65,14 @@ void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_re
   // tuh_hid_report_received_cb() will be invoked when report is available
   if ( !tuh_hid_receive_report(dev_addr, instance) )
   {
-    //printf("Error: cannot request to receive report\r\n");
+    // No report available
   }
 }
 
 // Invoked when device with hid interface is un-mounted
 void tuh_hid_umount_cb(uint8_t dev_addr, uint8_t instance)
 {
+  // TODO: Clean up after HID device.
   //printf("HID device address = %d, instance = %d is unmounted\r\n", dev_addr, instance);
 }
 
@@ -83,6 +84,7 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
   switch (itf_protocol)
   {
     case HID_ITF_PROTOCOL_KEYBOARD:
+      // Ignore keyboard.
       //process_kbd_report( (hid_keyboard_report_t const*) report );
     break;
 
@@ -99,7 +101,7 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
   // continue to request to receive report
   if ( !tuh_hid_receive_report(dev_addr, instance) )
   {
-    //printf("Error: cannot request to receive report\r\n");
+    // Error: cannot request to receive report
   }
 }
 
@@ -135,7 +137,7 @@ static void process_generic_report(uint8_t dev_addr, uint8_t instance, uint8_t c
   }
 
   if (!rpt_info) {
-    //printf("Couldn't find the report info for this report !\r\n");
+    // Couldn't find the report info for this report
     return;
   }
 
@@ -143,6 +145,7 @@ static void process_generic_report(uint8_t dev_addr, uint8_t instance, uint8_t c
   if (rpt_info->usage_page == HID_USAGE_PAGE_DESKTOP) {
     switch (rpt_info->usage) {
       case HID_USAGE_DESKTOP_KEYBOARD:
+	// Ignore keyboards.
         // Assume keyboard follow boot report layout
         //process_kbd_report( (hid_keyboard_report_t const*) report );
       break;

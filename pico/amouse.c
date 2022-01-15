@@ -191,11 +191,11 @@ int main() {
         if(serial_buffer[0] == '\r' || serial_buffer[0] == '\n') {
 	  if(!time_reached(timeout_console)) { // Check for consecutive enters.
 	    console(0);
-	    timeout_console = 0;
+	    timeout_console = time_us_32();
 	  }
 	  else { timeout_console = time_us_32() + (U_FULL_SECOND * 2); }
         }
-	else { timeout_console = 0; }
+	else { timeout_console = time_us_32(); } // Reset on any other input
       }
       time_rx_target = time_us_32() + U_FULL_SECOND;
     }
@@ -237,8 +237,7 @@ int main() {
 	update_mouse_state(&mouse);
 
 	queue_tx(&mouse); // Update next serial timing
-
-        serial_write(0, mouse.state, mouse.update);
+	if(mouse.update > 0) { serial_write(0, mouse.state, mouse.update); }
         reset_mouse_state(&mouse);
       }
 
