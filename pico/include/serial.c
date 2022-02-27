@@ -154,7 +154,7 @@ void wait_pin_state(int flag, int desired_state) {
 void mouse_ident(int uart_id, bool wheel_enabled) {
   /*** Mouse proto negotiation ***/
  
-  sleep_us(14); 
+  //sleep_us(14); 
 
   if(mouse_options.protocol == PROTO_MSWHEEL) {
     serial_write(uart_id, pkt_intellimouse_intro, pkt_intellimouse_intro_len); // Microsoft Intellimouse with wheel.

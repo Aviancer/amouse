@@ -52,6 +52,7 @@ CFG_TUSB_MEM_SECTION static hid_mouse_report_t usb_mouse_report_prev;
 const uint LED_PIN = PICO_DEFAULT_LED_PIN;
 bool led_state = false;
 
+bool init_req = false; // TODO: Does this work better now?
 
 /*** Timing ***/
 
@@ -120,6 +121,25 @@ extern void collect_mouse_report(hid_mouse_report_t* p_report) {
 }
 
 
+/*** Core 0 interrupt handling ***/
+
+// Sending IO from interrupt handler is problematic due to context switch,
+// leading to buffer pointer being corrupted. Only set flag to send here instead.
+void someother_callback(uint gpio, uint32_t events) {
+  // TODO: Can we drain Core 1 FIFO at this point?
+  //if(events & GPIO_IRQ_EDGE_RISE) {
+  //  gpio_put(LED_PIN, true);
+
+  /*  mouse_ident(0, mouse_options.wheel); // TODO mouse_options.wheel.
+    mouse.pc_state = CTS_TOGGLED;
+    gpio_put(LED_PIN, true);
+    led_state = true; */
+
+    init_req = true; 
+
+  //}
+}
+
 /*** Core 1 thread to offload serial writes ***/
 
 void core1_interrupt_handler() {
@@ -151,7 +171,7 @@ int main() {
   mouse_serial_init(0); // uart0
 
   // Should be launched before any interrupts
-  multicore_launch_core1(core1_tightloop);
+  multicore_launch_core1(core1_tightloop); //DEBUG
 
   // Set up initial state 
   //enable_pins(UART_RTS_BIT | UART_DTR_BIT);
@@ -159,9 +179,10 @@ int main() {
   mouse.pc_state = CTS_UNINIT;
 
   // Set default options, support mouse wheel.
-  mouse_options.protocol = PROTO_MSWHEEL;
-  mouse_options.wheel=1;
-  mouse_options.sensitivity=1.0;
+  mouse_options.protocol = PROTO_MSWHEEL; // DEBUG
+  //mouse_options.protocol = PROTO_MS2BUTTON; // DEBUG
+  mouse_options.wheel = 1;
+  mouse_options.sensitivity = 1.0;
 
   // Initialize USB
   tusb_init();
@@ -169,10 +190,12 @@ int main() {
   // Onboard LED
   gpio_init(LED_PIN);
   gpio_set_dir(LED_PIN, GPIO_OUT);
+  gpio_put(LED_PIN, false);
 
   // CTS Pin
-  gpio_init(UART_CTS_PIN); 
-  gpio_set_dir(UART_CTS_PIN, GPIO_IN);
+  //gpio_init(UART_CTS_PIN);  // DEBUG
+  //gpio_set_dir(UART_CTS_PIN, GPIO_IN);  // DEBUG
+  gpio_set_irq_enabled_with_callback(UART_CTS_PIN, GPIO_IRQ_EDGE_FALL, true, &someother_callback);
 
   // Set initial serial timer targets
   time_tx_target = time_us_32() + U_SERIALDELAY_3B; 
@@ -193,13 +216,20 @@ int main() {
       time_rx_target = time_us_32() + U_FULL_SECOND;
     }
 
+    if(init_req) { // DEBUG
+      mouse_ident(0, mouse_options.wheel); // TODO mouse_options.wheel.
+      mouse.pc_state = CTS_TOGGLED;
+      gpio_put(LED_PIN, true);
+      led_state = true;
+      init_req = false;
+    }
 
     // Mouse handling
 
-    cts_pin = gpio_get(UART_CTS_PIN);
+    //cts_pin = gpio_get(UART_CTS_PIN);
 
     // ### Check if mouse driver trying to initialize
-    if(cts_pin) { // Computers RTS is low, with MAX3232 this shows reversed as high instead? Check spec.
+    /*if(cts_pin) { // Computers RTS is low, with MAX3232 this shows reversed as high instead? Check spec.
       if(mouse.pc_state == CTS_UNINIT) { mouse.pc_state = CTS_LOW_INIT; }
       else if(mouse.pc_state == CTS_TOGGLED) { mouse.pc_state = CTS_LOW_RUN; }
     }
@@ -210,20 +240,21 @@ int main() {
       mouse_ident(0, mouse_options.wheel);
       gpio_put(LED_PIN, false);
       led_state = false;
-    }
+    }*/
+
 
     /*** Mouse update loop ***/
 
     // Transmit only once we are initialized at least once. Unlike in DOS, Windows drivers will set CTS pin 
     // low after init which would inhibit transmitting. We will trust the driver to re-init if needed.
-    if(mouse.pc_state > CTS_LOW_INIT) {
+    /*if(mouse.pc_state > CTS_LOW_INIT) {
       if(!led_state) {
         gpio_put(LED_PIN, true);
 	led_state = true;
-      }
+      }*/
 
-      tuh_task(); // tinyusb host task
- 
+      //tuh_task(); // tinyusb host task //DEBUG
+      /* //DEBUG
       if(time_reached(time_tx_target) || mouse.force_update) {
         runtime_settings(&mouse);
 	input_sensitivity(&mouse);
@@ -232,9 +263,9 @@ int main() {
 	queue_tx(&mouse); // Update next serial timing
 	if(mouse.update > 0) { serial_write(0, mouse.state, mouse.update); }
         reset_mouse_state(&mouse);
-      }
+      } */
 
-    }
+    //}
     //sleep_us(1);
   }
 
