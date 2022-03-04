@@ -180,7 +180,6 @@ int main() {
 
   // Set default options, support mouse wheel.
   mouse_options.protocol = PROTO_MSWHEEL; // DEBUG
-  //mouse_options.protocol = PROTO_MS2BUTTON; // DEBUG
   mouse_options.wheel = 1;
   mouse_options.sensitivity = 1.0;
 
@@ -247,14 +246,14 @@ int main() {
 
     // Transmit only once we are initialized at least once. Unlike in DOS, Windows drivers will set CTS pin 
     // low after init which would inhibit transmitting. We will trust the driver to re-init if needed.
-    /*if(mouse.pc_state > CTS_LOW_INIT) {
+    if(mouse.pc_state > CTS_LOW_INIT) {
       if(!led_state) {
         gpio_put(LED_PIN, true);
 	led_state = true;
-      }*/
+      }
 
-      //tuh_task(); // tinyusb host task //DEBUG
-      /* //DEBUG
+      tuh_task(); // tinyusb host task //DEBUG
+
       if(time_reached(time_tx_target) || mouse.force_update) {
         runtime_settings(&mouse);
 	input_sensitivity(&mouse);
@@ -263,9 +262,9 @@ int main() {
 	queue_tx(&mouse); // Update next serial timing
 	if(mouse.update > 0) { serial_write(0, mouse.state, mouse.update); }
         reset_mouse_state(&mouse);
-      } */
+      }
 
-    //}
+    }
     //sleep_us(1);
   }
 
