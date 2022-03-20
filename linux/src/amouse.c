@@ -83,7 +83,7 @@ void parse_opts(int argc, char **argv, struct linux_opts *options) {
         options->serialpath = strndup(optarg, 4096);
         break;
       case 'w':
-	mouse_options.wheel = 0;
+        mouse_options.protocol = PROTO_MS2BUTTON;
 	break;
       case 'i':
 	options->immediate = 1; // Don't wait for CTS pin to ident
@@ -204,6 +204,10 @@ static inline void process_mouse_report(mouse_state_t *mouse, struct input_event
 int main(int argc, char **argv) {
   struct termios old_tty;
 
+  // Default options
+  mouse_options.protocol = PROTO_MSWHEEL;
+  mouse_options.sensitivity = 1.0;
+
   // Parse commandline options
   if(argc < 2) { showhelp(argv); exit(0); }
   struct linux_opts *options = (struct linux_opts*) calloc(1, sizeof(struct linux_opts)); // Memory is zeroed by calloc
@@ -256,15 +260,12 @@ int main(int argc, char **argv) {
   uint8_t serial_buffer[2] = {0}; 
   int i; // Allocate outside main loop instead of allocating every time.
 
-  
   // Aggregate movements before sending
   struct timespec time_rx_target, time_tx_target;
   mouse_state_t mouse;
   mouse.pc_state = CTS_UNINIT;
-  mouse_options.sensitivity = 1.0;
-  mouse_options.protocol = PROTO_MSWHEEL;
   reset_mouse_state(&mouse); // Set packet memory to initial state
-
+			     //
   // Set timers
   time_tx_target = get_target_time(0, NS_SERIALDELAY_3B);
   time_rx_target = get_target_time(1, 0);
