@@ -27,7 +27,7 @@ TARGET = amouse
 all: serial.o utils.o mouse.o ${TARGET}
 
 ${TARGET}: ${SRC_DIR}/${TARGET}.c
-	${CC} ${CFLAGS} ${INCLUDES} -o ${BIN_DIR}/${TARGET} ${C_SOURCES} ${C_SHARED}
+	${CC} ${CFLAGS} -o ${BIN_DIR}/${TARGET} ${C_SOURCES} ${C_SHARED} ${INCLUDES} 
 
 utils.o: ${SRC_DIR}/../../shared/utils.c ${SRC_DIR}/../../shared/utils.h
 	${CC} ${CFLAGS} -c ${SRC_DIR}/../../shared/utils.c -o ${SRC_DIR}/include/utils.o

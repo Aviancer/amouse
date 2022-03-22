@@ -194,7 +194,7 @@ int main() {
   // CTS Pin
   //gpio_init(UART_CTS_PIN);  // DEBUG
   //gpio_set_dir(UART_CTS_PIN, GPIO_IN);  // DEBUG
-  gpio_set_irq_enabled_with_callback(UART_CTS_PIN, GPIO_IRQ_EDGE_FALL, true, &someother_callback);
+  //gpio_set_irq_enabled_with_callback(UART_CTS_PIN, GPIO_IRQ_EDGE_FALL, true, &someother_callback);
 
   // Set initial serial timer targets
   time_tx_target = time_us_32() + U_SERIALDELAY_3B; 
@@ -215,17 +215,17 @@ int main() {
       time_rx_target = time_us_32() + U_FULL_SECOND;
     }
 
-    if(init_req) { // DEBUG
+    /*if(init_req) { // DEBUG
       mouse_ident(0, mouse_options.wheel); // TODO mouse_options.wheel.
       mouse.pc_state = CTS_TOGGLED;
       gpio_put(LED_PIN, true);
       led_state = true;
       init_req = false;
-    }
+    }*/
 
     // Mouse handling
 
-    //cts_pin = gpio_get(UART_CTS_PIN);
+    cts_pin = gpio_get(UART_CTS_PIN);
 
     // ### Check if mouse driver trying to initialize
     /*if(cts_pin) { // Computers RTS is low, with MAX3232 this shows reversed as high instead? Check spec.
@@ -240,6 +240,17 @@ int main() {
       gpio_put(LED_PIN, false);
       led_state = false;
     }*/
+
+    if(cts_pin) { // Computers RTS low, only pin we care about for MS drivers, etc.
+      if(mouse.pc_state == CTS_UNINIT) { mouse.pc_state = CTS_LOW_INIT; }
+      else if(mouse.pc_state == CTS_TOGGLED) { mouse.pc_state = CTS_LOW_RUN; }
+    }
+
+    // Mouse initiaizing request detected
+    if(!cts_pin && (mouse.pc_state != CTS_UNINIT && mouse.pc_state != CTS_TOGGLED)) {
+      mouse.pc_state = CTS_TOGGLED;
+      mouse_ident(0, mouse_options.wheel);
+    }
 
 
     /*** Mouse update loop ***/
