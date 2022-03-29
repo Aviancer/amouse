@@ -54,7 +54,7 @@ void showhelp(char *argv[]) {
          "Usage: %s -m <mouse_input> -s <serial_output>\n\n" \
          "  -m <File> to read mouse input from (/dev/input/*)\n" \
          "  -s <File> to write to serial port with (/dev/tty*)\n" \
-	 "  -w Disable mouse wheel, switch to basic MS protocol\n" \
+	 "  -p <Proto> Select from available serial protocols (\'-p ?\' for list)\n" \
 	 "  -e Disable exclusive access to mouse\n" \
 	 "  -i Immediate ident mode, disables waiting for CTS pin\n" \
 	 "  -l Swap left and right buttons\n" \
@@ -67,9 +67,11 @@ void parse_opts(int argc, char **argv, struct linux_opts *options) {
 
   // Defaults
   mouse_options.wheel = 1;
+  mouse_options.protocol = PROTO_MSWHEEL;
+  mouse_options.sensitivity = 1.0;
   options->exclusive = 1;
 
-  while (( option_index = getopt(argc, argv, "hm:s:wield")) != -1) {
+  while (( option_index = getopt(argc, argv, "hm:s:p:ield")) != -1) {
 
     switch(option_index) {
       case '?':
@@ -82,8 +84,21 @@ void parse_opts(int argc, char **argv, struct linux_opts *options) {
       case 's':
         options->serialpath = strndup(optarg, 4096);
         break;
-      case 'w':
-        mouse_options.protocol = PROTO_MS2BUTTON;
+      case 'p':
+	scan_int_t scan_i;
+	uint num_protocols = sizeof mouse_protocol / sizeof mouse_protocol[0];
+
+	scan_i = scan_int((uint8_t*)optarg, 0, 2, 1); // Note: 0-9 only.
+	if(scan_i.found && scan_i.value < num_protocols) {
+	  mouse_options.protocol = scan_i.value;
+    	}
+	else {
+	  fprintf(stderr, "Available mouse protocols\n");
+	  for(int i=0; i < num_protocols; i++) {
+            fprintf(stderr, "  %i: %s\n", i, mouse_protocol[i].name);
+	  }
+	  exit(1);
+	}
 	break;
       case 'i':
 	options->immediate = 1; // Don't wait for CTS pin to ident
@@ -204,10 +219,6 @@ static inline void process_mouse_report(mouse_state_t *mouse, struct input_event
 int main(int argc, char **argv) {
   struct termios old_tty;
 
-  // Default options
-  mouse_options.protocol = PROTO_MSWHEEL;
-  mouse_options.sensitivity = 1.0;
-
   // Parse commandline options
   if(argc < 2) { showhelp(argv); exit(0); }
   struct linux_opts *options = (struct linux_opts*) calloc(1, sizeof(struct linux_opts)); // Memory is zeroed by calloc
@@ -271,6 +282,7 @@ int main(int argc, char **argv) {
   time_rx_target = get_target_time(1, 0);
   
   printf("%s\n\n", amouse_title);
+  printf("amouse> Selected mouse protocol: %s\n", mouse_protocol[mouse_options.protocol].name);
   aprint("Waiting for PC to initialize mouse driver..");
 
   // Ident immediately on program start up.
