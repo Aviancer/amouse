@@ -69,7 +69,7 @@ mouse_proto_t mouse_protocol[3] =
   {"Logitech",    "M3", 2,  3,  false, 3}, // LOGITECH   = 1, report is 3-4
   {"MS wheeled",  "MZ", 2,  3,  true,  4}  // MS_WHEELED = 2
 };
-
+uint mouse_protocol_num = sizeof mouse_protocol / sizeof mouse_protocol[0];
 
 // Full Serial Mouse intro with PnP information (Microsoft IntelliMouse)
 uint8_t pkt_intellimouse_intro[] = {0x4D,0x5A,0x40,0x00,0x00,0x00,0x08,0x01,0x24,0x2d,0x33,0x28,0x10,0x10,0x10,0x11,

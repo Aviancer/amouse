@@ -42,6 +42,7 @@ typedef struct mouse_proto {
 } mouse_proto_t;
 
 extern mouse_proto_t mouse_protocol[3]; // Global options
+extern uint mouse_protocol_num;
 
 enum MOUSE_PROTOCOLS {
   PROTO_MS2BUTTON = 0, // 2 buttons, 3 bytes

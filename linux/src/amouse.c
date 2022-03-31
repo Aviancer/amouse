@@ -54,7 +54,7 @@ void showhelp(char *argv[]) {
          "Usage: %s -m <mouse_input> -s <serial_output>\n\n" \
          "  -m <File> to read mouse input from (/dev/input/*)\n" \
          "  -s <File> to write to serial port with (/dev/tty*)\n" \
-	 "  -p <Proto> Select from available serial protocols (\'-p ?\' for list)\n" \
+	 "  -p <Proto num> Select from available serial protocols (\'-p ?\' for list)\n" \
 	 "  -e Disable exclusive access to mouse\n" \
 	 "  -i Immediate ident mode, disables waiting for CTS pin\n" \
 	 "  -l Swap left and right buttons\n" \
@@ -64,6 +64,7 @@ void showhelp(char *argv[]) {
 void parse_opts(int argc, char **argv, struct linux_opts *options) {
   int option_index = 0;
   int quit = 0;
+  scan_int_t scan_i;
 
   // Defaults
   mouse_options.wheel = 1;
@@ -85,16 +86,13 @@ void parse_opts(int argc, char **argv, struct linux_opts *options) {
         options->serialpath = strndup(optarg, 4096);
         break;
       case 'p':
-	scan_int_t scan_i;
-	uint num_protocols = sizeof mouse_protocol / sizeof mouse_protocol[0];
-
 	scan_i = scan_int((uint8_t*)optarg, 0, 2, 1); // Note: 0-9 only.
-	if(scan_i.found && scan_i.value < num_protocols) {
+	if(scan_i.found && scan_i.value < mouse_protocol_num) {
 	  mouse_options.protocol = scan_i.value;
     	}
 	else {
 	  fprintf(stderr, "Available mouse protocols\n");
-	  for(int i=0; i < num_protocols; i++) {
+	  for(int i=0; i < mouse_protocol_num; i++) { // < is 0-indexed
             fprintf(stderr, "  %i: %s\n", i, mouse_protocol[i].name);
 	  }
 	  exit(1);
