@@ -19,6 +19,7 @@
 
 #include <stdbool.h>
 
+#include "utils.h"
 
 /*** Shared definitions ***/
 
@@ -102,6 +103,8 @@ void reset_mouse_state(mouse_state_t *mouse);
 void runtime_settings(mouse_state_t *mouse);
 
 void input_sensitivity(mouse_state_t *mouse);
+
+void set_sensitivity(scan_int_t scan_i);
 
 void push_update(mouse_state_t *mouse, bool full_packet);
 

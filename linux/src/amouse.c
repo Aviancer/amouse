@@ -55,6 +55,7 @@ void showhelp(char *argv[]) {
          "  -m <File> to read mouse input from (/dev/input/*)\n" \
          "  -s <File> to write to serial port with (/dev/tty*)\n" \
 	 "  -p <Proto num> Select from available serial protocols (\'-p ?\' for list)\n" \
+	 "  -r <1-25> Set mouse responsiveness/sensitivity\n" \
 	 "  -e Disable exclusive access to mouse\n" \
 	 "  -i Immediate ident mode, disables waiting for CTS pin\n" \
 	 "  -l Swap left and right buttons\n" \
@@ -64,7 +65,7 @@ void showhelp(char *argv[]) {
 void parse_opts(int argc, char **argv, struct linux_opts *options) {
   int option_index = 0;
   int quit = 0;
-  scan_int_t scan_i;
+  scan_int_t scan_i;         // Re-usable ret type for char arr to int conversion
 
   // Defaults
   mouse_options.wheel = 1;
@@ -72,7 +73,7 @@ void parse_opts(int argc, char **argv, struct linux_opts *options) {
   mouse_options.sensitivity = 1.0;
   options->exclusive = 1;
 
-  while (( option_index = getopt(argc, argv, "hm:s:p:ield")) != -1) {
+  while (( option_index = getopt(argc, argv, "hm:s:p:r:ield")) != -1) {
 
     switch(option_index) {
       case '?':
@@ -98,6 +99,10 @@ void parse_opts(int argc, char **argv, struct linux_opts *options) {
 	  exit(1);
 	}
 	break;
+      case 'r':
+	scan_i = scan_int((uint8_t*)optarg, 0, 3, 2); // Note: 0-99 only.
+        set_sensitivity(scan_i);
+        break;
       case 'i':
 	options->immediate = 1; // Don't wait for CTS pin to ident
 	break;
@@ -127,8 +132,9 @@ void parse_opts(int argc, char **argv, struct linux_opts *options) {
 }
 
 void aprint(const char *message) {
-    printf("amouse> %s\n", message);
+  printf("amouse> %s", message);
 }
+
 
 /*** USB comms ***/
 
@@ -216,6 +222,7 @@ static inline void process_mouse_report(mouse_state_t *mouse, struct input_event
 
 int main(int argc, char **argv) {
   struct termios old_tty;
+  char itoa_buffer[6] = {0}; // Re-usable buffer for converting ints to char arr
 
   // Parse commandline options
   if(argc < 2) { showhelp(argv); exit(0); }
@@ -280,12 +287,16 @@ int main(int argc, char **argv) {
   time_rx_target = get_target_time(1, 0);
   
   printf("%s\n\n", amouse_title);
-  printf("amouse> Selected mouse protocol: %s\n", mouse_protocol[mouse_options.protocol].name);
-  aprint("Waiting for PC to initialize mouse driver..");
+  aprint("Selected mouse protocol: "); printf("%s\n", mouse_protocol[mouse_options.protocol].name);
+  if(options->debug) {
+    itoa((int)(mouse_options.sensitivity * 10), itoa_buffer, sizeof(itoa_buffer) - 1);
+    aprint("Mouse sensitiviy set to "); printf("%s.\n", itoa_buffer);
+  }
+  aprint("Waiting for PC to initialize mouse driver..\n");
 
   // Ident immediately on program start up.
   if(options->immediate) {
-    aprint("Performing immediate identification as mouse.");
+    aprint("Performing immediate identification as mouse.\n");
     mouse_ident(serial_fd, mouse_options.wheel);
     mouse.pc_state = CTS_TOGGLED; // Bypass CTS detection, send events straight away.
   }
@@ -300,9 +311,9 @@ int main(int argc, char **argv) {
     if(timespec_reached(&time_rx_target)) {
       if(serial_read(serial_fd, serial_buffer, 1) > 0) {
 	if(serial_buffer[0] == '\b') {
-	  aprint("Console requested from serial line, suspending adapter.");
+	  aprint("Console requested from serial line, suspending adapter.\n");
 	  console(serial_fd);
-	  aprint("Serial console closed, resuming adapter.");
+	  aprint("Serial console closed, resuming adapter.\n");
 	}
       }
       time_rx_target = get_target_time(1, 0); 
@@ -321,11 +332,11 @@ int main(int argc, char **argv) {
     // Mouse initiaizing request detected
     if(pc_cts && (mouse.pc_state != CTS_UNINIT && mouse.pc_state != CTS_TOGGLED)) {
       if(options->debug) {
-	aprint("Computers RTS pin toggled, identifying as mouse.");
+	aprint("Computers RTS pin toggled, identifying as mouse.\n");
       }
       mouse.pc_state = CTS_TOGGLED;
       mouse_ident(serial_fd, mouse_options.wheel);
-      aprint("Mouse initialized. Good to go!");
+      aprint("Mouse initialized. Good to go!\n");
     }
 
     // Transmit only once we are initialized at least once. Unlike in DOS, Windows drivers will set CTS pin 

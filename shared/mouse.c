@@ -170,6 +170,12 @@ void input_sensitivity(mouse_state_t *mouse) {
   mouse->y = mouse->y * mouse_options.sensitivity;
 }
 
+// Helper function for keeping mouse sensitivity setting consistent.
+void set_sensitivity(scan_int_t scan_i) {
+  if(scan_i.found) {
+    mouse_options.sensitivity = clampf(((float)scan_i.value / 10), 0.1, 2.5);
+  }
+}
 
 /*** Flow control functions ***/
 
@@ -306,16 +312,13 @@ void console(int fd) {
 	    break;
 	  case 3: // Sensitivity
 	    scan_i = scan_int(cmd_buffer, scan_i.offset, CMD_BUFFER_LEN, 5);
-	    if(scan_i.found) { 
-	      mouse_options.sensitivity = clampf(((float)scan_i.value / 10), 0.1, 2.5);
-	    }
+	    set_sensitivity(scan_i);
 	    itoa((int)(mouse_options.sensitivity * 10), itoa_buffer, sizeof(itoa_buffer) - 1);
 	    console_printvar(fd, "Mouse sensitivity set to ", itoa_buffer, ".\n");
 	    break;
 	  case 4: // Mouse protocol
 	    scan_i = scan_int(cmd_buffer, scan_i.offset, CMD_BUFFER_LEN, 1);
 	    if(scan_i.found) { mouse_options.protocol = clampi(scan_i.value, 0, 2); }
-	    //else { mouse_options.wheel = !mouse_options.wheel; }
 	    console_printvar(fd, "Mouse protocol set to ", mouse_protocol[mouse_options.protocol].name, ". You may want to re-initialize OS mouse driver.\n");
 	    break;
 	  case 5: // Swap left/right buttons
