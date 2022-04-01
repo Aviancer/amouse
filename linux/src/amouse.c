@@ -288,10 +288,8 @@ int main(int argc, char **argv) {
   
   printf("%s\n\n", amouse_title);
   aprint("Selected mouse protocol: "); printf("%s\n", mouse_protocol[mouse_options.protocol].name);
-  if(options->debug) {
-    itoa((int)(mouse_options.sensitivity * 10), itoa_buffer, sizeof(itoa_buffer) - 1);
-    aprint("Mouse sensitiviy set to "); printf("%s.\n", itoa_buffer);
-  }
+  itoa((int)(mouse_options.sensitivity * 10), itoa_buffer, sizeof(itoa_buffer) - 1);
+  aprint("Mouse sensitiviy set to "); printf("%s.\n", itoa_buffer);
   aprint("Waiting for PC to initialize mouse driver..\n");
 
   // Ident immediately on program start up.
