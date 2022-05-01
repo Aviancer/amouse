@@ -125,7 +125,11 @@ void wait_pin_state(int fd, int flag, int desired_state) {
 
 void mouse_ident(int fd, bool wheel_enabled) {
   if(mouse_options.protocol == PROTO_MSWHEEL) {
-    write(fd, &pkt_intellimouse_intro, pkt_intellimouse_intro_len);
+    int bytes=0;
+    for(; bytes < pkt_intellimouse_intro_len; bytes++) {
+      if(!get_pin(fd, TIOCM_CTS)) { break; }
+      write(fd, &pkt_intellimouse_intro[bytes], 1);
+    }
   }
   else {
     write(

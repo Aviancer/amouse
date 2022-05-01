@@ -157,7 +157,14 @@ void mouse_ident(int uart_id, bool wheel_enabled) {
   //sleep_us(14); 
 
   if(mouse_options.protocol == PROTO_MSWHEEL) {
-    serial_write(uart_id, pkt_intellimouse_intro, pkt_intellimouse_intro_len); // Microsoft Intellimouse with wheel.
+    int bytes=0;
+    for(; bytes < pkt_intellimouse_intro_len; bytes++) {
+      // Interrupt long write if no longer requested to ident.
+      // It would be more optimal if this happened on the writing side.
+      // Currently this is max 8 byte delay, ~60ms, but probably less due to blocking.
+      if(gpio_get(UART_CTS_PIN)) { break; }
+      multicore_fifo_push_blocking(pkt_intellimouse_intro[bytes]);
+    }
   }
   else {
     serial_write(

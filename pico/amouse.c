@@ -189,7 +189,9 @@ int main() {
   // Onboard LED
   gpio_init(LED_PIN);
   gpio_set_dir(LED_PIN, GPIO_OUT);
-  gpio_put(LED_PIN, false);
+  gpio_put(LED_PIN, false); // DEBUG DISABLED
+  sleep_us(500000); // DEBUG
+  gpio_put(LED_PIN, true); // DEBUG DISABLED
 
   // CTS Pin
   //gpio_init(UART_CTS_PIN);  // DEBUG
@@ -248,19 +250,21 @@ int main() {
 
     // Mouse initiaizing request detected
     if(!cts_pin && (mouse.pc_state != CTS_UNINIT && mouse.pc_state != CTS_TOGGLED)) {
+      gpio_put(LED_PIN, false); // DEBUG
       mouse.pc_state = CTS_TOGGLED;
       mouse_ident(0, mouse_options.wheel);
     }
 
 
     /*** Mouse update loop ***/
+    //mouse.pc_state = CTS_LOW_RUN; // DEBUG
 
     // Transmit only once we are initialized at least once. Unlike in DOS, Windows drivers will set CTS pin 
     // low after init which would inhibit transmitting. We will trust the driver to re-init if needed.
     if(mouse.pc_state > CTS_LOW_INIT) {
       if(!led_state) {
-        gpio_put(LED_PIN, true);
-	led_state = true;
+        //gpio_put(LED_PIN, false); // DEBUG
+	led_state = true; // DEBUG - there's nothing that should turn the led off but it turns off anyway?
       }
 
       tuh_task(); // tinyusb host task //DEBUG
@@ -269,6 +273,8 @@ int main() {
         runtime_settings(&mouse);
 	input_sensitivity(&mouse);
 	update_mouse_state(&mouse);
+
+	//mouse.update = 4; // DEBUG
 
 	queue_tx(&mouse); // Update next serial timing
 	if(mouse.update > 0) { serial_write(0, mouse.state, mouse.update); }
