@@ -160,10 +160,9 @@ void mouse_ident(int uart_id, bool wheel_enabled) {
     int bytes=0;
     for(; bytes < pkt_intellimouse_intro_len; bytes++) {
       // Interrupt long write if no longer requested to ident.
-      // It would be more optimal if this happened on the writing side.
-      // Currently this is max 8 byte delay, ~60ms, but probably less due to blocking.
-      if(gpio_get(UART_CTS_PIN)) { break; }
-      multicore_fifo_push_blocking(pkt_intellimouse_intro[bytes]);
+      if(gpio_get(UART_CTS_PIN)) { break; } 
+      // Write directly in core0 context for maximum responsiveness.
+      uart_putc_raw(uart0, pkt_intellimouse_intro[bytes]);
     }
   }
   else {

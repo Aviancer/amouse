@@ -255,7 +255,6 @@ int main() {
       mouse_ident(0, mouse_options.wheel);
     }
 
-
     /*** Mouse update loop ***/
     //mouse.pc_state = CTS_LOW_RUN; // DEBUG
 
