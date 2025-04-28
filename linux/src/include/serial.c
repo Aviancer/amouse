@@ -26,17 +26,11 @@
 #include "serial.h"
 #include "../../../shared/mouse.h"
 
-uint8_t pkt_intellimouse_intro[] = "\x4D\x5A";
- 
+
 /*** Serial comms ***/
 
-/* Write to serial out with enforced order, otherwise we may have bytes flipped */
 int serial_write(int fd, uint8_t *buffer, int size) { 
-  int bytes=0;
-  for(; bytes < size; bytes++) {
-    write(fd, &buffer[bytes], 1);
-  }  
-  return bytes;
+  return write(fd, buffer, size);
 }
 
 /* Write to serial out with enforced order, convert terminal characters */
@@ -130,24 +124,19 @@ void wait_pin_state(int fd, int flag, int desired_state) {
 }
 
 void mouse_ident(int fd, bool wheel_enabled) {
-  /*** Microsoft Mouse proto negotiation ***/
-  /*if(!immediate) {
-    wait_pin_state(fd, TIOCM_CTS | TIOCM_DSR, 0); // Computers RTS & DTR
-    wait_pin_state(fd, TIOCM_CTS, 1); 
-    usleep(14); // Simulate real mouse start up.
-  }*/
-  /* Byte1:Always M
-   * Byte2:[None]=Microsoft 3=Logitech Z=MicrosoftWheel  */
-  //uint8_t logitech[] = "\x4D\x33";
-  //uint8_t microsoft[] = "\x4D";
-  /* IntelliMouse: MZ@... */
-  //uint8_t pkt_intellimouse_intro[] = "\x4D\x5A"; // MZ
-
-  if(wheel_enabled) {
-    serial_write(fd, pkt_intellimouse_intro, sizeof(pkt_intellimouse_intro)); // 2 byte intro is sufficient
+  if(mouse_options.protocol == PROTO_MSWHEEL) {
+    int bytes=0;
+    for(; bytes < pkt_intellimouse_intro_len; bytes++) {
+      if(!get_pin(fd, TIOCM_CTS)) { break; }
+      write(fd, &pkt_intellimouse_intro[bytes], 1);
+    }
   }
   else {
-    serial_write(fd, pkt_intellimouse_intro, 1); // M for basic Microsoft proto. 
+    write(
+      fd, 
+      mouse_protocol[mouse_options.protocol].serial_ident,
+      mouse_protocol[mouse_options.protocol].serial_ident_len
+    );
   }
 }
 

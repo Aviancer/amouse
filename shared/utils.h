@@ -17,10 +17,33 @@
 #ifndef UTILS_H_   /* Include guard */
 #define UTILS_H_
 
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
+
+#ifdef __linux__
+#include <stdlib.h>
+#else
+#include "pico/stdlib.h"
+#endif
+
+// Return type for scan_int()
+typedef struct scan_int_ret {
+  bool found;
+  int value;
+  uint16_t offset; // How many bytes we have read into buffer.
+} scan_int_t;
+
 const char * byte_to_bitstring(uint8_t val);
 
 int clampi(int value, int min, int max);
 
 float clampf(float value, float min, float max);
+
+uint atou(char* intbuffer, uint max_digits);
+
+void itoa(int integer, char* intbuffer, uint max_digits);
+
+scan_int_t scan_int(uint8_t* buffer, uint i, uint scan_size, uint max_digits);
 
 #endif // UTILS_H_

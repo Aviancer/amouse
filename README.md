@@ -10,11 +10,25 @@ Anachro Mouse, a usb to serial mouse adapter.
 
 ![Picture of a black box with USB and serial connector](images/amouse-box.jpg?raw=true)
 
-This software will convert USB mouse inputs to Microsoft serial mouse protocol for retro hardware. This way you can use a Raspberry Pico, a Raspberry Pi or an existing modern PC/laptop to mouse on your retro system.
+This software will convert USB mouse inputs to a selectable serial mouse protocol for retro hardware. This way you can use a Raspberry Pico, a Raspberry Pi or an existing modern PC/laptop to mouse on your retro system.
 
 If you do feel a bit more adventurous and would like to build a stand-alone adapter device, I have included the code to do this using a Raspberry Pico microcontroller. A circuit diagram is provided under the `diagrams` folder.
 
-The adapter has been tested to work against DOS and Windows 95 serial mouse drivers so far.
+The adapter has been tested to work against DOS, Windows 95 and 98 serial mouse drivers so far.
+
+# Features
+
+Input aggregation from USB data rates to serial, for making the mouse response smooth and accurate.
+
+On-the-fly sensitivity control and easy menu based configuration over serial terminal.
+Emulated protocols:
+- Wheeled Microsoft IntelliPoint mouse (Both DOS and Windows Plug and Play compatible).
+- Generic two button Microsoft serial Mouse, without wheel.
+- Logitech three button mouse.
+
+All protocols work on DOS and Windows with the appropriate mouse driver or ctmouse.exe available from the FreeDOS project.
+
+Version 1.5.0 fixes earlier regression in identifying mouse to Windows drivers.
 
 # Controls
 
@@ -24,7 +38,7 @@ Once the mouse is initialized - hold down both left and right mouse buttons. The
 - Scroll mouse wheel up to add sensitivity
 - Scroll mouse wheel down to reduce sensitivity
 
-One mouse wheel click adds/reduces sensitivity by a factor of 0.2, you can adjust sensitivity between 0.2 and 2.0. 
+One mouse wheel click adds/reduces sensitivity by a factor of 0.2, you can adjust sensitivity between 0.2 and 2.5. 
 
 ## Serial console for configuration
 
@@ -51,13 +65,13 @@ No hardware flow control
 Press `enter` to bring up the serial console, the adapter will switch to configuration mode and a menu will open. If you get scrambled characters, check all your terminal settings.
 For an example you can enter: `3 11<enter>` to change the mouse sensitivity to 11 (1.1 in the above sensitivity scale).
 
-Enter the exit command to the serial console after you are done configuring amouse, returning it to adapter mode. If you changed protocols, you may need to re-initialize the OS mouse driver.
+Enter the `exit command` to the serial console after you are done configuring amouse, returning it to adapter mode. If you changed protocols, you may need to re-initialize the OS mouse driver.
 
 # Linux version
 
 Tested to work also on a Raspberry Pi.
 
-The Linux version can be found under the 'linux' subdirectory. I wrote this as a prototype before moving on to writing a Raspberry Pico implementation of the same.
+The Linux version can be found under the 'linux' subdirectory. I wrote this initially as a prototype before moving on to writing a Raspberry Pico implementation of the same, but have continued to keep it up to date also.
 
 The mouse is by default captured in exclusive mode so you can use it without worrying about sending inputs to the system running it. Non-exclusive mode is also supported.
 
@@ -103,10 +117,6 @@ If your serial cable/adapter isn't fully pinned (missing a CTS pin), you may use
 
 Provides a stand-alone adapter running on a Raspberry Pico microcontroller for converting from USB to Serial Mouse.
 
-Currently supports emulating the following protocols:
-- Wheeled Microsoft Mouse, with all three buttons and wheel working. 
-- Two button Microsoft Mouse, without wheel.
-
 ![Electronic schematic of the adapter](diagrams/amouse-schematic.png?raw=true)
 
 ## Requirements
@@ -145,11 +155,14 @@ See `diagrams` directory for how to wire the Pico correctly to talk to a serial 
 - Provide the Pico with 5v power (and appropriate grounding, etc)
 - Run a mouse driver/start a serial mouse using OS on the computer
 
-Provided that everything is connected up correctly, the adapter will auto-detect any mouse driver initialization from the PC and introduce itself as a Microsoft mouse. You can then use your USB mouse as a serial mouse.
+Provided that everything is connected up correctly, the adapter will auto-detect any mouse driver initialization from the PC and by default introduce itself as a Microsoft mouse. You can then use your USB mouse as a serial mouse.
 
 # Planned future features
 
 - Storing settings like sensitivity and used mouse protocol in a non-volatile manner.
+- Mouse Systems protocol.
+- Graceful handling of reconnecting USB devices.
+- DOS-native software for setting options without serial terminal program.
 
 # FAQ
 
@@ -158,6 +171,3 @@ A: A serial mouse is pretty anachronistic these days, but there's plenty of peop
 
 Q: Why a serial mouse?
 A: Lots of people enjoy playing with retro PC hardware and I wanted there to be something that's easy with minimal hardware to use as a serial mouse while the latter are becoming increasingly rare or are breaking.
-
-Q: Anachromous isn't a word.
-A: Neither is that a question. However it sounds like it should be a word.

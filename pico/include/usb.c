@@ -1,5 +1,5 @@
 /*
- * Anachro Mouse, a usb to serial mouse adaptor. Copyright (C) 2021 Aviancer <oss+amouse@skyvian.me>
+ * Anachro Mouse, a usb to serial mouse adaptor. Copyright (C) 2021-2025 Aviancer <oss+amouse@skyvian.me>
  *
  * This library is free software; you can redistribute it and/or modify it under the terms of the 
  * GNU Lesser General Public License as published by the Free Software Foundation; either version 
@@ -31,18 +31,6 @@ CFG_TUSB_MEM_SECTION static char serial_in_buffer[64] = { 0 };
 //static inline void process_mouse_report(mouse_state_t *mouse, hid_mouse_report_t const *p_report);
 static void process_generic_report(uint8_t dev_addr, uint8_t instance, uint8_t const* report, uint16_t len);
 
-// invoked ISR context
-void tuh_cdc_xfer_isr(uint8_t dev_addr, xfer_result_t event, cdc_pipeid_t pipe_id, uint32_t xferred_bytes)
-{
-  (void) event;
-  (void) pipe_id;
-  (void) xferred_bytes;
-
-  tu_memclr(serial_in_buffer, sizeof(serial_in_buffer));
-
-  tuh_cdc_receive(dev_addr, serial_in_buffer, sizeof(serial_in_buffer), true); // waiting for next data
-}
-
 // Invoked when device with hid interface is mounted
 // Report descriptor is also available for use. tuh_hid_parse_report_descriptor()
 // can be used to parse common/simple enough descriptor.
@@ -65,13 +53,14 @@ void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_re
   // tuh_hid_report_received_cb() will be invoked when report is available
   if ( !tuh_hid_receive_report(dev_addr, instance) )
   {
-    //printf("Error: cannot request to receive report\r\n");
+    // No report available
   }
 }
 
 // Invoked when device with hid interface is un-mounted
 void tuh_hid_umount_cb(uint8_t dev_addr, uint8_t instance)
 {
+  // TODO: Clean up after HID device.
   //printf("HID device address = %d, instance = %d is unmounted\r\n", dev_addr, instance);
 }
 
@@ -83,6 +72,7 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
   switch (itf_protocol)
   {
     case HID_ITF_PROTOCOL_KEYBOARD:
+      // Ignore keyboard.
       //process_kbd_report( (hid_keyboard_report_t const*) report );
     break;
 
@@ -99,7 +89,7 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
   // continue to request to receive report
   if ( !tuh_hid_receive_report(dev_addr, instance) )
   {
-    //printf("Error: cannot request to receive report\r\n");
+    // Error: cannot request to receive report
   }
 }
 
@@ -108,6 +98,7 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
 
 static void process_generic_report(uint8_t dev_addr, uint8_t instance, uint8_t const* report, uint16_t len) {
   (void) dev_addr;
+  (void) len;
 
   uint8_t const rpt_count = hid_info[instance].report_count;
   tuh_hid_report_info_t* rpt_info_arr = hid_info[instance].report_info;
@@ -135,7 +126,7 @@ static void process_generic_report(uint8_t dev_addr, uint8_t instance, uint8_t c
   }
 
   if (!rpt_info) {
-    //printf("Couldn't find the report info for this report !\r\n");
+    // Couldn't find the report info for this report
     return;
   }
 
@@ -143,6 +134,7 @@ static void process_generic_report(uint8_t dev_addr, uint8_t instance, uint8_t c
   if (rpt_info->usage_page == HID_USAGE_PAGE_DESKTOP) {
     switch (rpt_info->usage) {
       case HID_USAGE_DESKTOP_KEYBOARD:
+        // Ignore keyboards.
         // Assume keyboard follow boot report layout
         //process_kbd_report( (hid_keyboard_report_t const*) report );
       break;

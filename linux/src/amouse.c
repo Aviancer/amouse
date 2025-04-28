@@ -54,7 +54,8 @@ void showhelp(char *argv[]) {
          "Usage: %s -m <mouse_input> -s <serial_output>\n\n" \
          "  -m <File> to read mouse input from (/dev/input/*)\n" \
          "  -s <File> to write to serial port with (/dev/tty*)\n" \
-	 "  -w Disable mouse wheel, switch to basic MS protocol\n" \
+	 "  -p <Proto num> Select from available serial protocols (\'-p ?\' for list)\n" \
+	 "  -r <1-25> Set mouse responsiveness/sensitivity\n" \
 	 "  -e Disable exclusive access to mouse\n" \
 	 "  -i Immediate ident mode, disables waiting for CTS pin\n" \
 	 "  -l Swap left and right buttons\n" \
@@ -64,26 +65,44 @@ void showhelp(char *argv[]) {
 void parse_opts(int argc, char **argv, struct linux_opts *options) {
   int option_index = 0;
   int quit = 0;
+  scan_int_t scan_i;         // Re-usable ret type for char arr to int conversion
 
-  while (( option_index = getopt(argc, argv, "hm:s:wield")) != -1) {
-    // Defaults
-    mouse_options.wheel = 1;
-    options->exclusive = 1;
+  // Defaults
+  mouse_options.wheel = 1;
+  mouse_options.protocol = PROTO_MSWHEEL;
+  mouse_options.sensitivity = 1.0;
+  options->exclusive = 1;
+
+  while (( option_index = getopt(argc, argv, "hm:s:p:r:ield")) != -1) {
 
     switch(option_index) {
+      case '?':
+      case 'h':
+        showhelp(argv); exit(0);
+        break;
       case 'm':
         options->mousepath = strndup(optarg, 4096); // Max path size is 4095, plus a null byte
         break;
       case 's':
         options->serialpath = strndup(optarg, 4096);
         break;
-
-      case 'h':
-        showhelp(argv); exit(0);
-        break;
-      case 'w':
-	mouse_options.wheel = 0;
+      case 'p':
+	scan_i = scan_int((uint8_t*)optarg, 0, 2, 1); // Note: 0-9 only.
+	if(scan_i.found && scan_i.value < mouse_protocol_num) {
+	  mouse_options.protocol = scan_i.value;
+    	}
+	else {
+	  fprintf(stderr, "Available mouse protocols\n");
+	  for(int i=0; i < mouse_protocol_num; i++) { // < is 0-indexed
+            fprintf(stderr, "  %i: %s\n", i, mouse_protocol[i].name);
+	  }
+	  exit(1);
+	}
 	break;
+      case 'r':
+	scan_i = scan_int((uint8_t*)optarg, 0, 3, 2); // Note: 0-99 only.
+        set_sensitivity(scan_i);
+        break;
       case 'i':
 	options->immediate = 1; // Don't wait for CTS pin to ident
 	break;
@@ -113,8 +132,9 @@ void parse_opts(int argc, char **argv, struct linux_opts *options) {
 }
 
 void aprint(const char *message) {
-    printf("amouse> %s\n", message);
+  printf("amouse> %s", message);
 }
+
 
 /*** USB comms ***/
 
@@ -166,7 +186,9 @@ static inline void process_mouse_report(mouse_state_t *mouse, struct input_event
       case BTN_MIDDLE:
 	mouse->mmb = ev->value;
 	mouse->force_update = true;
-	push_update(mouse, true); // Every time MMB changes (on or off), must send 4 bytes.
+	if(mouse_protocol[mouse_options.protocol].buttons > 2) { 
+	  push_update(mouse, true); // Every time MMB changes (on or off), must send 4 bytes.
+	} 
 	break;
     }
   }
@@ -177,18 +199,21 @@ static inline void process_mouse_report(mouse_state_t *mouse, struct input_event
       case REL_X:
 	mouse->x += ev->value;
 	mouse->x = clampi(mouse->x, -36862, 36862);
+        push_update(mouse, mouse->mmb);
 	break;
       case REL_Y:
 	mouse->y += ev->value;
 	mouse->y = clampi(mouse->y, -36862, 36862);
+        push_update(mouse, mouse->mmb);
 	break;
       case REL_WHEEL:
 	mouse->wheel += ev->value;
 	mouse->wheel = clampi(mouse->wheel, -63, 63);
-	push_update(mouse, true);
+	if(mouse_protocol[mouse_options.protocol].wheel) {
+	  push_update(mouse, true);
+	}
 	break;
     }
-    push_update(mouse, mouse->mmb);
   }
 }
 
@@ -197,6 +222,7 @@ static inline void process_mouse_report(mouse_state_t *mouse, struct input_event
 
 int main(int argc, char **argv) {
   struct termios old_tty;
+  char itoa_buffer[6] = {0}; // Re-usable buffer for converting ints to char arr
 
   // Parse commandline options
   if(argc < 2) { showhelp(argv); exit(0); }
@@ -241,7 +267,7 @@ int main(int argc, char **argv) {
  
   // Initialize serial parameters 
   setup_tty(serial_fd, (speed_t)B1200);
-  enable_pin(serial_fd, TIOCM_RTS | TIOCM_DTR);
+  disable_pin(serial_fd, TIOCM_RTS | TIOCM_DTR); // We're not a modem so make sure pins low.
 
   fcntl (0, F_SETFL, O_NONBLOCK); // Nonblock 0=stdin
   setvbuf(stdout, NULL, _IONBF, 0); // Unbuffer stdout
@@ -250,41 +276,42 @@ int main(int argc, char **argv) {
   uint8_t serial_buffer[2] = {0}; 
   int i; // Allocate outside main loop instead of allocating every time.
 
-  
   // Aggregate movements before sending
   struct timespec time_rx_target, time_tx_target;
   mouse_state_t mouse;
   mouse.pc_state = CTS_UNINIT;
-  mouse_options.sensitivity = 1.0;
   reset_mouse_state(&mouse); // Set packet memory to initial state
-
+			     //
   // Set timers
   time_tx_target = get_target_time(0, NS_SERIALDELAY_3B);
   time_rx_target = get_target_time(1, 0);
   
   printf("%s\n\n", amouse_title);
-  aprint("Waiting for PC to initialize mouse driver..");
+  aprint("Selected mouse protocol: "); printf("%s\n", mouse_protocol[mouse_options.protocol].name);
+  itoa((int)(mouse_options.sensitivity * 10), itoa_buffer, sizeof(itoa_buffer) - 1);
+  aprint("Mouse sensitiviy set to "); printf("%s.\n", itoa_buffer);
+  aprint("Waiting for PC to initialize mouse driver..\n");
 
   // Ident immediately on program start up.
   if(options->immediate) {
-    aprint("Performing immediate identification as mouse.");
+    aprint("Performing immediate identification as mouse.\n");
     mouse_ident(serial_fd, mouse_options.wheel);
     mouse.pc_state = CTS_TOGGLED; // Bypass CTS detection, send events straight away.
   }
 
-  
   /*** Main loop ***/
+  bool pc_cts = false;
 
   while(1) {
 
-    // Check for request for serial console  
+    // Check for request for serial console
     // Repeating non-blocking reads is slow so instead we queue checks every now and then with timer.
     if(timespec_reached(&time_rx_target)) {
       if(serial_read(serial_fd, serial_buffer, 1) > 0) {
-	if(serial_buffer[0] == '\r' || serial_buffer[0] == '\n') {
-	  aprint("Console requested from serial line, suspending adapter.");
+	if(serial_buffer[0] == '\b') {
+	  aprint("Console requested from serial line, suspending adapter.\n");
 	  console(serial_fd);
-	  aprint("Serial console closed, resuming adapter.");
+	  aprint("Serial console closed, resuming adapter.\n");
 	}
       }
       time_rx_target = get_target_time(1, 0); 
@@ -293,23 +320,26 @@ int main(int argc, char **argv) {
 
     // Mouse handling
 
-    bool pc_pins = get_pin(serial_fd, TIOCM_CTS | TIOCM_DSR);
+    pc_cts = get_pin(serial_fd, TIOCM_CTS);
 
-    if(!pc_pins) { // Computers RTS & DTR low 
-      mouse.pc_state = CTS_LOW_INIT;
+    if(!pc_cts) { // Computers RTS low, only pin we care about for MS drivers, etc.
+      if(mouse.pc_state == CTS_UNINIT) { mouse.pc_state = CTS_LOW_INIT; }
+      else if(mouse.pc_state == CTS_TOGGLED) { mouse.pc_state = CTS_LOW_RUN; }
     }
 
     // Mouse initiaizing request detected
-    if(pc_pins && mouse.pc_state == CTS_LOW_INIT) {
+    if(pc_cts && (mouse.pc_state != CTS_UNINIT && mouse.pc_state != CTS_TOGGLED)) {
       if(options->debug) {
-	aprint("Computers RTS & DTR pins set low, identifying as mouse.");
+	aprint("Computers RTS pin toggled, identifying as mouse.\n");
       }
       mouse.pc_state = CTS_TOGGLED;
       mouse_ident(serial_fd, mouse_options.wheel);
-      aprint("Mouse initialized. Good to go!");
+      aprint("Mouse initialized. Good to go!\n");
     }
 
-    if((mouse.pc_state == CTS_TOGGLED) && 
+    // Transmit only once we are initialized at least once. Unlike in DOS, Windows drivers will set CTS pin 
+    // low after init which would inhibit transmitting. We will trust the driver to re-init if needed.
+    if((mouse.pc_state > CTS_LOW_INIT) && 
       (libevdev_next_event(mouse_dev, LIBEVDEV_READ_FLAG_NORMAL, &ev) == LIBEVDEV_READ_STATUS_SUCCESS)) {
 
       process_mouse_report(&mouse, &ev, options);
@@ -332,9 +362,9 @@ int main(int argc, char **argv) {
         }
 	if(options->debug) { printf("\n"); }
 
-	// Use variable send rate depending on whether middle mouse button pressed or not (3 or 4 byte updates)
-	if(mouse.mmb) { time_tx_target = get_target_time(0, NS_SERIALDELAY_4B); }
-	else          { time_tx_target = get_target_time(0, NS_SERIALDELAY_3B); }
+	// Use different send rate depending on protocol used (3 or 4 byte)
+	if(mouse.update > 3) { time_tx_target = get_target_time(0, NS_SERIALDELAY_4B); }
+	else                  { time_tx_target = get_target_time(0, NS_SERIALDELAY_3B); }
 
 	reset_mouse_state(&mouse);
       }

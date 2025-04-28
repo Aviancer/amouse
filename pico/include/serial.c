@@ -1,5 +1,5 @@
 /*
- * Anachro Mouse, a usb to serial mouse adaptor. Copyright (C) 2021 Aviancer <oss+amouse@skyvian.me>
+ * Anachro Mouse, a usb to serial mouse adaptor. Copyright (C) 2021-2025 Aviancer <oss+amouse@skyvian.me>
  *
  * This library is free software; you can redistribute it and/or modify it under the terms of the 
  * GNU Lesser General Public License as published by the Free Software Foundation; either version 
@@ -15,20 +15,26 @@
 */
 
 #include "pico/stdlib.h"
+#include "pico/multicore.h"
 
 #include "serial.h"
+#include "../shared/mouse.h"
 
 // Map for iterating through each bit (index) for pin (value)  
 // Should be updated to reflect UART_..._PIN values.
 const int UART_BITS2PINS[] = {0,1,3,4,5,6};
 const uint UART_BITS2PINS_LENGTH = 6;
 
-uint8_t pkt_intellimouse_intro[] = {0x4D,0x5A};
+// For queue purposes we need something that can be referred to with pointer
+const uint8_t chr_carriage_return = (uint8_t)'\r';
 
 #define BAUD_RATE 1200
 #define DATA_BITS 7
 #define STOP_BITS 1
 #define PARITY UART_PARITY_NONE
+
+// Multi-core serial data queue 
+queue_t serial_queue;
 
 /*** Serial comms ***/
 
@@ -60,33 +66,32 @@ void mouse_serial_init(int uart_id) {
   }
 }
 
-// TODO: Size does not always match if mixing null terminated and not packets.
-// Does not currently confirm that TX FIFO is writable.
-int serial_write(int uart_id, uint8_t *buffer, int size) { 
-  uart_inst_t* uart = get_uart(uart_id);
+int serial_write(int uart_id, uint8_t *buffer, int size) {
+  // For now uart is what gets set in Core 1 loop.
   int bytes=0;
-  if(uart != NULL) {
-    for(; bytes < size; bytes++) {
-      uart_putc_raw(uart, buffer[bytes]); 
-    } 
+  for(; bytes < size; bytes++) {
+    // Offload serial write to Core 1
+    queue_add_blocking(&serial_queue, &buffer[bytes]);
   }
   return bytes;
 }
 
-/* Write to serial out with enforced order, convert terminal characters */
+/* Write to serial out with convert terminal characters */
 int serial_write_terminal(int uart_id, uint8_t *buffer, int size) { 
-  uart_inst_t* uart = get_uart(uart_id);
+  // For now uart is what gets set in Core 1 loop.
+  //uart_inst_t* uart = get_uart(uart_id);
   int bytes=0;
-  if(uart != NULL) {
-    for(; bytes <= size; bytes++) {
-      if(buffer[bytes] == '\0') { return bytes; }
-      // Convert LF to CRLF
-      else if(buffer[bytes] == '\n') {
-	uart_putc_raw(uart, '\r');
-      }
-      uart_putc_raw(uart, buffer[bytes]); 
-    } 
-  }
+  for(int pos=0; pos <= size; pos++) {
+    if(buffer[pos] == '\0') { return bytes; }
+    // Convert LF to CRLF
+    else if(buffer[pos] == '\n') {
+      queue_add_blocking(&serial_queue, &chr_carriage_return);
+      bytes++;
+    }
+    // Offload serial write to Core 1
+    queue_add_blocking(&serial_queue, &buffer[pos]);
+    bytes++;
+  } 
   return bytes;
 }
 
@@ -97,8 +102,8 @@ int serial_read(int uart_id, uint8_t *buffer, int size) {
   if(uart != NULL) {
     for(int i=0; i < size; i++) {
       if(uart_is_readable(uart)) {
-	buffer[bytes] = uart_getc(uart);
-	bytes++;
+      	buffer[bytes] = uart_getc(uart);
+	      bytes++;
       }
       else { break; }
     } 
@@ -141,24 +146,22 @@ void wait_pin_state(int flag, int desired_state) {
 }
 
 void mouse_ident(int uart_id, bool wheel_enabled) {
-  /*** Microsoft Mouse proto negotiation ***/
+  /*** Mouse proto negotiation ***/
  
-  sleep_us(14); 
-
-  /* Byte1:Always M
-   * Byte2:[None]=Microsoft 3=Logitech Z=MicrosoftWheel  */
-  //uint8_t logitech[] = "\x4D\x33";
-  //uint8_t microsoft[] = "\x4D";
-  /* IntelliMouse: MZ@... */
-  //uint8_t pkt_intellimouse_intro[] = "\x4D\x5A"; // MZ
-
-  if(wheel_enabled) {
-    serial_write(uart_id, pkt_intellimouse_intro, sizeof(pkt_intellimouse_intro)); // 2 byte intro is sufficient
+  if(mouse_options.protocol == PROTO_MSWHEEL) {
+    int bytes=0;
+    for(; bytes < pkt_intellimouse_intro_len; bytes++) {
+      // Interrupt long write if no longer requested to ident.
+      if(gpio_get(UART_CTS_PIN)) { break; } 
+      queue_add_blocking(&serial_queue, &pkt_intellimouse_intro[bytes]);
+    }
   }
   else {
-    serial_write(uart_id, pkt_intellimouse_intro, 1); // M for basic Microsoft proto. 
+    serial_write(
+      uart_id,
+      mouse_protocol[mouse_options.protocol].serial_ident,
+      mouse_protocol[mouse_options.protocol].serial_ident_len
+    );
   }
 
-  // sleep_us(63); // Simulate mouse init delay
-  //write(fd, &logitech[1], 1); // Not enabled currently
 }
