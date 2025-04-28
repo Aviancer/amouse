@@ -25,11 +25,16 @@
 const int UART_BITS2PINS[] = {0,1,3,4,5,6};
 const uint UART_BITS2PINS_LENGTH = 6;
 
+// For queue purposes we need something that can be referred to with pointer
+const uint8_t chr_carriage_return = (uint8_t)'\r';
+
 #define BAUD_RATE 1200
 #define DATA_BITS 7
 #define STOP_BITS 1
 #define PARITY UART_PARITY_NONE
 
+// Multi-core serial data queue 
+queue_t serial_queue;
 
 /*** Serial comms ***/
 
@@ -66,7 +71,7 @@ int serial_write(int uart_id, uint8_t *buffer, int size) {
   int bytes=0;
   for(; bytes < size; bytes++) {
     // Offload serial write to Core 1
-    multicore_fifo_push_blocking(buffer[bytes]);
+    queue_add_blocking(&serial_queue, &buffer[bytes]);
   }
   return bytes;
 }
@@ -77,7 +82,7 @@ int serial_write(int uart_id, uint8_t *buffer, int size) {
   for (size_t i = 0; i < size; ++i) {
       while (!uart_is_writable(uart))
           tight_loop_contents();
-      uart_get_hw(uart)->dr = *buffer++;
+          uart_get_hw(uart)->dr = *buffer++;
   }
   return size;
 }*/
@@ -91,11 +96,11 @@ int serial_write_terminal(int uart_id, uint8_t *buffer, int size) {
     if(buffer[pos] == '\0') { return bytes; }
     // Convert LF to CRLF
     else if(buffer[pos] == '\n') {
-      multicore_fifo_push_blocking((uint8_t)'\r');
+      queue_add_blocking(&serial_queue, &chr_carriage_return);
       bytes++;
     }
     // Offload serial write to Core 1
-    multicore_fifo_push_blocking(buffer[pos]);
+    queue_add_blocking(&serial_queue, &buffer[pos]);
     bytes++;
   } 
   return bytes;
@@ -108,8 +113,8 @@ int serial_read(int uart_id, uint8_t *buffer, int size) {
   if(uart != NULL) {
     for(int i=0; i < size; i++) {
       if(uart_is_readable(uart)) {
-	buffer[bytes] = uart_getc(uart);
-	bytes++;
+      	buffer[bytes] = uart_getc(uart);
+	      bytes++;
       }
       else { break; }
     } 

@@ -22,6 +22,7 @@
 #include "stdbool.h"
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
+#include "pico/util/queue.h"
 #include "hardware/irq.h"
 
 #include "include/version.h"
@@ -116,7 +117,7 @@ static inline void process_mouse_report(mouse_state_t *mouse, hid_mouse_report_t
 
 // External interface for delivering mouse reports to process_mouse_report()
 // Allows keeping static context within amouse.c while tinyusb handling can be shifted to usb.c
-extern void collect_mouse_report(hid_mouse_report_t* p_report) {
+extern void collect_mouse_report(hid_mouse_report_t const* p_report) {
   process_mouse_report(&mouse, p_report); // Passes full context with mouse and report without having to make them external/non-static.
 }
 
@@ -142,26 +143,13 @@ void someother_callback(uint gpio, uint32_t events) {
 
 /*** Core 1 thread to offload serial writes ***/
 
-void core1_interrupt_handler() {
-  while (multicore_fifo_rvalid()){
-    uint8_t byte = multicore_fifo_pop_blocking();
-    uart_putc_raw(uart0, byte); // TODO: Make UART configurable.
-  }
-  multicore_fifo_clear_irq(); // Clear interrupt
-}
-
 void core1_tightloop() {
-  // Configure Core 1 interrupt
-  multicore_fifo_clear_irq();
-  irq_set_exclusive_handler(SIO_IRQ_PROC1, core1_interrupt_handler);
-  irq_set_enabled(SIO_IRQ_PROC1, true);
-
-  // Loop while waiting for interrupt
+  uint8_t serial_data;
   while(1) {
-    tight_loop_contents();
+    queue_remove_blocking(&serial_queue, &serial_data);
+    uart_putc_raw(uart0, serial_data); // TODO: Make UART configurable.
   }
 }
-
 
 /*** Main init & loop ***/
 
@@ -171,7 +159,7 @@ int main() {
   mouse_serial_init(0); // uart0
 
   // Should be launched before any interrupts
-  multicore_launch_core1(core1_tightloop); //DEBUG
+  multicore_launch_core1(core1_tightloop);
 
   // Set up initial state 
   //enable_pins(UART_RTS_BIT | UART_DTR_BIT);
@@ -211,7 +199,7 @@ int main() {
     if(time_reached(time_rx_target)) {
       if(serial_read(0, serial_buffer, 1) > 0) {
         if(serial_buffer[0] == '\b') {
-	    console(0);
+    	    console(0);
         }
       }
       time_rx_target = time_us_32() + U_FULL_SECOND;
@@ -263,23 +251,22 @@ int main() {
     if(mouse.pc_state > CTS_LOW_INIT) {
       if(!led_state) {
         //gpio_put(LED_PIN, false); // DEBUG
-	led_state = true; // DEBUG - there's nothing that should turn the led off but it turns off anyway?
+      	led_state = true; // DEBUG - there's nothing that should turn the led off but it turns off anyway?
       }
 
       tuh_task(); // tinyusb host task //DEBUG
 
       if(time_reached(time_tx_target) || mouse.force_update) {
         runtime_settings(&mouse);
-	input_sensitivity(&mouse);
-	update_mouse_state(&mouse);
+      	input_sensitivity(&mouse);
+	      update_mouse_state(&mouse);
 
-	//mouse.update = 4; // DEBUG
+      	//mouse.update = 4; // DEBUG
 
-	queue_tx(&mouse); // Update next serial timing
-	if(mouse.update > 0) { serial_write(0, mouse.state, mouse.update); }
-        reset_mouse_state(&mouse);
-      }
-
+      	queue_tx(&mouse); // Update next serial timing
+	      if(mouse.update > 0) { serial_write(0, mouse.state, mouse.update); }
+          reset_mouse_state(&mouse);
+        }
     }
     //sleep_us(1);
   }

@@ -37,6 +37,6 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
 static void process_generic_report(uint8_t dev_addr, uint8_t instance, uint8_t const* report, uint16_t len);
 
 // For offloading context to amouse.c
-extern void collect_mouse_report(hid_mouse_report_t* p_report);
+extern void collect_mouse_report(hid_mouse_report_t const* p_report);
 
 #endif // USB_H_

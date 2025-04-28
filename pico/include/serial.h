@@ -17,6 +17,8 @@
 #ifndef SERIAL_H_
 #define SERIAL_H_
 
+#include "pico/util/queue.h"
+
 // Which pin has which function
 // Serial spec (Fem): TX(2), RX(3), DSR(4), DTR(6), CTS(7), RTS(8)
 //                    GRN    YLW    ORN     BLU     WHI     BLK
@@ -40,6 +42,8 @@ enum UART_BITS {
   UART_CTS_BIT = 5,
   UART_RTS_BIT = 6
 };
+
+extern queue_t serial_queue; // Global serial data queue
 
 uart_inst_t* get_uart(int uart_id);
 

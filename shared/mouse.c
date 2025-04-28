@@ -120,7 +120,7 @@ bool update_mouse_state(mouse_state_t *mouse) {
   switch(mouse_options.protocol) {
     case PROTO_LOGITECH: 
       if(mouse->mmb) {
-	mouse->state[3] = 0x20;
+	      mouse->state[3] = 0x20;
       }
       // Note: Implicit, MMB release gets also sent as 4 byte packet (push_update on mmb change).
       break;
