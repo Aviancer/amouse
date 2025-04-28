@@ -18,14 +18,17 @@ The adapter has been tested to work against DOS, Windows 95 and 98 serial mouse 
 
 # Features
 
-On-the-fly sensitivity control and easy menu based configuration over serial terminal.
+Input aggregation from USB data rates to serial, for making the mouse response smooth and accurate.
 
+On-the-fly sensitivity control and easy menu based configuration over serial terminal.
 Emulated protocols:
 - Wheeled Microsoft IntelliPoint mouse (Both DOS and Windows Plug and Play compatible).
 - Generic two button Microsoft serial Mouse, without wheel.
 - Logitech three button mouse.
 
-All protocols work on DOS with the appropriate mouse driver or ctmouse.exe available from the FreeDOS project.
+All protocols work on DOS and Windows with the appropriate mouse driver or ctmouse.exe available from the FreeDOS project.
+
+Version 1.5.0 fixes earlier regression in identifying mouse to Windows drivers.
 
 # Controls
 
