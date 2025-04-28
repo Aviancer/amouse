@@ -1,5 +1,5 @@
 /*
- * Anachro Mouse, a usb to serial mouse adaptor. Copyright (C) 2021 Aviancer <oss+amouse@skyvian.me>
+ * Anachro Mouse, a usb to serial mouse adaptor. Copyright (C) 2021-2025 Aviancer <oss+amouse@skyvian.me>
  *
  * This library is free software; you can redistribute it and/or modify it under the terms of the 
  * GNU Lesser General Public License as published by the Free Software Foundation; either version 
@@ -76,17 +76,6 @@ int serial_write(int uart_id, uint8_t *buffer, int size) {
   return bytes;
 }
 
-// Closer to hardware write method, not working yet.
-/*int serial_write(int uart_id, uint8_t *buffer, int size) {
-  uart_inst_t* uart = get_uart(uart_id);
-  for (size_t i = 0; i < size; ++i) {
-      while (!uart_is_writable(uart))
-          tight_loop_contents();
-          uart_get_hw(uart)->dr = *buffer++;
-  }
-  return size;
-}*/
-
 /* Write to serial out with convert terminal characters */
 int serial_write_terminal(int uart_id, uint8_t *buffer, int size) { 
   // For now uart is what gets set in Core 1 loop.
@@ -159,15 +148,12 @@ void wait_pin_state(int flag, int desired_state) {
 void mouse_ident(int uart_id, bool wheel_enabled) {
   /*** Mouse proto negotiation ***/
  
-  //sleep_us(14); 
-
   if(mouse_options.protocol == PROTO_MSWHEEL) {
     int bytes=0;
     for(; bytes < pkt_intellimouse_intro_len; bytes++) {
       // Interrupt long write if no longer requested to ident.
       if(gpio_get(UART_CTS_PIN)) { break; } 
-      // Write directly in core0 context for maximum responsiveness.
-      uart_putc_raw(uart0, pkt_intellimouse_intro[bytes]);
+      queue_add_blocking(&serial_queue, &pkt_intellimouse_intro[bytes]);
     }
   }
   else {
