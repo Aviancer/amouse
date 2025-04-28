@@ -166,6 +166,3 @@ A: A serial mouse is pretty anachronistic these days, but there's plenty of peop
 
 Q: Why a serial mouse?
 A: Lots of people enjoy playing with retro PC hardware and I wanted there to be something that's easy with minimal hardware to use as a serial mouse while the latter are becoming increasingly rare or are breaking.
-
-Q: Anachromous isn't a word.
-A: Neither is that a question. However it sounds like it should be a word.
