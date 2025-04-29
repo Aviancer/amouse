@@ -125,7 +125,7 @@ extern void collect_mouse_report(hid_mouse_report_t const* p_report) {
 void core1_tightloop() {
   uint8_t serial_data;
   while(1) {
-    serial_data = serial_queue_pop(&serial_data);
+    serial_queue_pop(&serial_data);
     uart_putc_raw(uart0, serial_data); // TODO: Make UART configurable.
   }
 }
