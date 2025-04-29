@@ -55,6 +55,8 @@ int serial_write_terminal(int uart_id, uint8_t *buffer, int size);
 
 int serial_read(int uart_id, uint8_t *buffer, int size);
 
+uint8_t serial_queue_pop(uint8_t *buffer);
+
 int get_pins(int flag);
 
 void enable_pins(int flag);

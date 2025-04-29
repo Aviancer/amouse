@@ -125,7 +125,7 @@ extern void collect_mouse_report(hid_mouse_report_t const* p_report) {
 void core1_tightloop() {
   uint8_t serial_data;
   while(1) {
-    queue_remove_blocking(&serial_queue, &serial_data);
+    serial_data = serial_queue_pop(&serial_data);
     uart_putc_raw(uart0, serial_data); // TODO: Make UART configurable.
   }
 }
@@ -137,7 +137,7 @@ int main() {
   // Initialize serial parameters 
   mouse_serial_init(0); // uart0
 
-  // Initialize global serial queue
+  // Initialize the global serial data queue
   queue_init(&serial_queue, sizeof(uint8_t), 80);
 
   // Should be launched before any interrupts
@@ -149,7 +149,7 @@ int main() {
   mouse.pc_state = CTS_UNINIT;
 
   // Set default options, support mouse wheel.
-  mouse_options.protocol = PROTO_MSWHEEL; // DEBUG
+  mouse_options.protocol = PROTO_MSWHEEL;
   mouse_options.wheel = 1;
   mouse_options.sensitivity = 1.0;
 
@@ -159,12 +159,9 @@ int main() {
   // Onboard LED
   gpio_init(LED_PIN);
   gpio_set_dir(LED_PIN, GPIO_OUT);
-  //gpio_put(LED_PIN, false); // DEBUG DISABLED
-  //sleep_us(500000); // DEBUG
-  //gpio_put(LED_PIN, true); // DEBUG DISABLED
 
   // Set initial serial timer targets
-  time_tx_target = time_us_32() + U_SERIALDELAY_3B; 
+  time_tx_target = time_us_32() + U_SERIALDELAY_3B;
   time_rx_target = time_us_32() + U_FULL_SECOND; 
 
   bool cts_pin = false;
@@ -175,7 +172,8 @@ int main() {
     // Repeating non-blocking reads is slow so instead we queue checks every now and then with timer.
     if(time_reached(time_rx_target)) {
       if(serial_read(0, serial_buffer, 1) > 0) {
-        if(serial_buffer[0] == '\r' || serial_buffer[0] == '\n') {
+        // Use backspace to enable console instead of \n\r to avoid ATDT autodetection on Windows
+        if(serial_buffer[0] == '\b') {
     	    console(0);
         }
       }
@@ -202,7 +200,7 @@ int main() {
     // low after init which would inhibit transmitting. We will trust the driver to re-init if needed.
     if(mouse.pc_state > CTS_LOW_INIT) {
       if(!led_state) {
-      	led_state = true; // DEBUG - there's nothing that should turn the led off but it turns off anyway?
+      	led_state = true;
       }
 
       tuh_task(); // tinyusb host task
@@ -214,8 +212,8 @@ int main() {
 
       	queue_tx(&mouse); // Update next serial timing
 	      if(mouse.update > 0) { serial_write(0, mouse.state, mouse.update); }
-          reset_mouse_state(&mouse);
-        }
+        reset_mouse_state(&mouse);
+      }
     }
 
   }

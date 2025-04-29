@@ -299,44 +299,44 @@ void console(int fd) {
       scan_i = scan_int(cmd_buffer, 0, CMD_BUFFER_LEN, 5);
 
       if(scan_i.found) {
-	switch(scan_i.value) {
-	  case 1: // Help
-	    serial_write_terminal(fd, (uint8_t*)amouse_menu, sizeof(amouse_menu));
-	    break;
-	  case 2: // Settings
-	    serial_write_terminal(fd, (uint8_t*)"[Settings]\n", 11);
-	    console_printvar(fd, "  Mouse protocol: ", mouse_protocol[mouse_options.protocol].name, "\n");
-	    itoa((int)(mouse_options.sensitivity * 10), itoa_buffer, sizeof(itoa_buffer) - 1);
-	    console_printvar(fd, "  Mouse sensitivity: ", itoa_buffer, "\n");
-	    console_printvar(fd, "  Mouse buttons: ", (mouse_options.swap_buttons) ? "Swapped" : "Not swapped", "\n");
-	    break;
-	  case 3: // Sensitivity
-	    scan_i = scan_int(cmd_buffer, scan_i.offset, CMD_BUFFER_LEN, 5);
-	    set_sensitivity(scan_i);
-	    itoa((int)(mouse_options.sensitivity * 10), itoa_buffer, sizeof(itoa_buffer) - 1);
-	    console_printvar(fd, "Mouse sensitivity set to ", itoa_buffer, ".\n");
-	    break;
-	  case 4: // Mouse protocol
-	    scan_i = scan_int(cmd_buffer, scan_i.offset, CMD_BUFFER_LEN, 1);
-	    if(scan_i.found) { mouse_options.protocol = clampi(scan_i.value, 0, 2); }
-	    console_printvar(fd, "Mouse protocol set to ", mouse_protocol[mouse_options.protocol].name, ". You may want to re-initialize OS mouse driver.\n");
-	    break;
-	  case 5: // Swap left/right buttons
-	    scan_i = scan_int(cmd_buffer, scan_i.offset, CMD_BUFFER_LEN, 1);
-	    if(scan_i.found) { mouse_options.swap_buttons = clampi(scan_i.value, 0, 1); }
-	    else { mouse_options.swap_buttons = !mouse_options.swap_buttons; }
-	    console_printvar(fd, "Mouse buttons are now ", (mouse_options.swap_buttons) ? "swapped" : "unswapped", ".\n");
-	    break;
-	  case 6: // Exit
-	    serial_write_terminal(fd, (uint8_t*)amouse_bye, sizeof(amouse_bye));
-	    return;
-	    break;
-	  case 0: // Write/load flash
-	    serial_write_terminal(fd, (uint8_t*)"Not yet implemented.\n", 22); 
-	    break;
-	  default:
-	    serial_write_terminal(fd, (uint8_t*)"Command not valid.\n", 19); 
-	}
+        switch(scan_i.value) {
+          case 1: // Help
+            serial_write_terminal(fd, (uint8_t*)amouse_menu, sizeof(amouse_menu));
+            break;
+          case 2: // Settings
+            serial_write_terminal(fd, (uint8_t*)"[Settings]\n", 11);
+            console_printvar(fd, "  Mouse protocol: ", mouse_protocol[mouse_options.protocol].name, "\n");
+            itoa((int)(mouse_options.sensitivity * 10), itoa_buffer, sizeof(itoa_buffer) - 1);
+            console_printvar(fd, "  Mouse sensitivity: ", itoa_buffer, "\n");
+            console_printvar(fd, "  Mouse buttons: ", (mouse_options.swap_buttons) ? "Swapped" : "Not swapped", "\n");
+            break;
+          case 3: // Sensitivity
+            scan_i = scan_int(cmd_buffer, scan_i.offset, CMD_BUFFER_LEN, 5);
+            set_sensitivity(scan_i);
+            itoa((int)(mouse_options.sensitivity * 10), itoa_buffer, sizeof(itoa_buffer) - 1);
+            console_printvar(fd, "Mouse sensitivity set to ", itoa_buffer, ".\n");
+            break;
+          case 4: // Mouse protocol
+            scan_i = scan_int(cmd_buffer, scan_i.offset, CMD_BUFFER_LEN, 1);
+            if(scan_i.found) { mouse_options.protocol = clampi(scan_i.value, 0, 2); }
+            console_printvar(fd, "Mouse protocol set to ", mouse_protocol[mouse_options.protocol].name, ". You may want to re-initialize OS mouse driver.\n");
+            break;
+          case 5: // Swap left/right buttons
+            scan_i = scan_int(cmd_buffer, scan_i.offset, CMD_BUFFER_LEN, 1);
+            if(scan_i.found) { mouse_options.swap_buttons = clampi(scan_i.value, 0, 1); }
+            else { mouse_options.swap_buttons = !mouse_options.swap_buttons; }
+            console_printvar(fd, "Mouse buttons are now ", (mouse_options.swap_buttons) ? "swapped" : "unswapped", ".\n");
+            break;
+          case 6: // Exit
+            serial_write_terminal(fd, (uint8_t*)amouse_bye, sizeof(amouse_bye));
+            return;
+            break;
+          case 0: // Write/load flash
+            serial_write_terminal(fd, (uint8_t*)"Not yet implemented.\n", 22); 
+            break;
+          default:
+            serial_write_terminal(fd, (uint8_t*)"Command not valid.\n", 19); 
+        }
       }
 
       read_len = write_pos = 0;

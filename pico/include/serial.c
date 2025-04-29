@@ -111,6 +111,11 @@ int serial_read(int uart_id, uint8_t *buffer, int size) {
   return bytes;
 }
 
+/* Pop the next entry from the serial data queue */
+uint8_t serial_queue_pop(uint8_t *buffer) {
+  queue_remove_blocking(&serial_queue, &buffer);
+}
+
 int get_pins(int flag) {
   int serial_state = 0;
 /*  serial_state |= (gpio_get(UART_TX_PIN)  << UART_TX_BIT);
