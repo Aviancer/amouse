@@ -49,6 +49,7 @@ enum MOUSE_PROTOCOLS {
   PROTO_MS2BUTTON = 0, // 2 buttons, 3 bytes
   PROTO_LOGITECH  = 1, // 3 buttons, 3-4 bytes
   PROTO_MSWHEEL   = 2  // 3 buttons, wheel, 4 bytes.
+  PROTO_MOUSESYS  = 3  // Mouse systems, TBD
 };
 
 // Delay between data packets for 1200 baud
@@ -76,7 +77,7 @@ typedef struct mouse_state {
 
 // Struct for user settable mouse options
 typedef struct mouse_opts {
-  int protocol;
+  uint protocol;
   float sensitivity; // Sensitivity coefficient
   bool wheel;
   bool swap_buttons;

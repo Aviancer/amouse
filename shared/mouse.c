@@ -1,5 +1,5 @@
 /*
- * Anachro Mouse, a usb to serial mouse adaptor. Copyright (C) 2021 Aviancer <oss+amouse@skyvian.me>
+ * Anachro Mouse, a usb to serial mouse adaptor. Copyright (C) 2021-2025 Aviancer <oss+amouse@skyvian.me>
  *
  * This library is free software; you can redistribute it and/or modify it under the terms of the 
  * GNU Lesser General Public License as published by the Free Software Foundation; either version 
@@ -173,7 +173,7 @@ void input_sensitivity(mouse_state_t *mouse) {
 // Helper function for keeping mouse sensitivity setting consistent.
 void set_sensitivity(scan_int_t scan_i) {
   if(scan_i.found) {
-    mouse_options.sensitivity = clampf(((float)scan_i.value / 10), 0.1, 2.5);
+    mouse_options.sensitivity = clampf(((float)scan_i.value / 10), 0.2, 2.5);
   }
 }
 

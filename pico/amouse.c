@@ -123,6 +123,8 @@ extern void collect_mouse_report(hid_mouse_report_t const* p_report) {
 /*** Core 1 thread to offload serial writes ***/
 
 void core1_tightloop() {
+  flash_safe_execute_core_init(); // Ensure core1 can be safetied for duration of writing to flash
+
   uint8_t serial_data;
   while(1) {
     serial_queue_pop(&serial_data);

@@ -1,0 +1,138 @@
+/*
+ * Anachro Mouse, a usb to serial mouse adaptor. Copyright (C) 2025 Aviancer <oss+amouse@skyvian.me>
+ *
+ * This library is free software; you can redistribute it and/or modify it under the terms of the 
+ * GNU Lesser General Public License as published by the Free Software Foundation; either version 
+ * 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without 
+ * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License along with this library; 
+ * if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ *
+*/
+
+#include "pico/flash.h"
+#include "hardware/flash.h"
+
+#include "../shared/mouse.h"
+
+/* 
+   Application code lives on the same flash space, and is always programmed to the front of the flash.
+   We should ensure we write our data starting from the end of the flash. There is about 2MB of space.
+
+   PICO_FLASH_SIZE_BYTES | 2MB        | Total size of flash
+   FLASH_SECTOR_SIZE     | 4096 bytes | Single sector - minimum size for erasure.
+   FLASH_PAGE_SIZE       | 256 bytes  | Single page - minimum size for writing data.
+
+   We use flash_safe_execute() to call flash functions inside safe context.
+   This avoids interrupts and running other code, including interacting with flash on the second core.
+*/
+
+// Address for last available sector
+#define FLASH_TARGET (PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE)
+
+// Pointer to flash storage area
+const uint8_t *flash_target_contents = (const uint8_t *) (XIP_BASE + FLASH_TARGET);
+
+void print_buf(const uint8_t *buf, size_t len) {
+   for (size_t i = 0; i < len; ++i) {
+       printf("%02x", buf[i]);
+       if (i % 16 == 15)
+           printf("\n");
+       else
+           printf(" ");
+   }
+}
+
+// This function will be called when it's safe to call flash_range_erase
+static void call_flash_range_erase(void *param) {
+   uint32_t offset = (uint32_t)param;
+   flash_range_erase(offset, FLASH_SECTOR_SIZE);
+}
+
+// This function will be called when it's safe to call flash_range_program
+static void call_flash_range_program(void *param) {
+   uint32_t offset = ((uintptr_t*)param)[0];
+
+   const uint8_t *data = (const uint8_t *)((uintptr_t*)param)[1];
+   flash_range_program(offset, data, sizeof(mouse_opts_t));
+}
+
+static void erase_flash_settings() {
+   // timeout = UINT32_MAX
+   int rc = flash_safe_execute(call_flash_range_erase, (void*)FLASH_TARGET, UINT32_MAX);
+   hard_assert(rc == PICO_OK);
+}
+
+static void read_flash_settings() {
+   print_buf(flash_target_contents, sizeof(mouse_opts_t));
+}
+
+static void settings_to_uint8() {
+
+   /* Magic bytes?
+    *  Easy option? Convert to bitmask?
+    *  
+    *  Minimum page size is a 256 byte write.
+    *
+    *  Layout:
+    *    [canary][version][options][canary][checksum] (crc32?)
+    *
+    *  Bits
+    *    How many protocols do we want to support? At least 3, probably 4.
+    *  
+    *    Sensitivity is between 0.2 and 2.5 with increments/decrements of 0.2.
+    *    Effectively 12.5 values. So 4 bits (for 16 values)
+    *
+    *    Flags: WHEEL, SWAP_BUTTONS
+    *
+    *  PROTO|SENSITIVITY|FLAGS|RESERVED              |
+    *  01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16
+    *
+    *  Version: 1 byte, 0x00-0xFF
+    *
+    *  Mo[version][options]uS[checksum] ?
+   */
+
+   uint8_t config_data[9] = {
+      0x4D, // 0: Canary M
+      0x6F, // 1: Canary o
+      0x00, // 2: Config version 0
+      0x00, // 3: Options 1
+      0x00, // 4: Options 2 (Reserved)
+      0x75, // 5: Canary u
+      0x4F, // 6: Canary S
+      0x00, // 7: CRC-8 checksum
+      0x00  // 8: Null byte
+   }
+
+   config_data[3] |= mouse_options.protocol | mouse_options.sensitivity | mouse_options.wheel | mouse_options.swap_buttons;
+
+   mouse_options_t tester;
+
+   tester.protocol = PROTO_MSWHEEL;
+   tester.wheel = 1;
+   tester.sensitivity = 1.0;
+   tester.swap_buttons = 0;
+ 
+}
+
+static void write_flash_settings() {
+   erase_flash_settings(); // Erase is implicit in writing
+
+   /* uint8_t magic[3 + sizeof(mouse_options_t) + 1]
+
+   mouse_options.protocol;     // int
+   mouse_options.sensitivity;  // float 
+   mouse_options.wheel;        // bool
+   mouse_options.swap_buttons; // bool
+   */ 
+
+   uintptr_t params[] = { FLASH_TARGET, (uintptr_t)mouse_options };
+   // timeout = UINT32_MAX
+   rc = flash_safe_execute(call_flash_range_program, params, UINT32_MAX);
+   hard_assert(rc == PICO_OK);
+}
