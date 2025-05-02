@@ -27,6 +27,7 @@
 #include "include/serial.h"
 #include "../../shared/mouse.h"
 #include "../../shared/utils.h"
+#include "../../shared/settings.h"
 
 // Linux specific
 #include <sys/ioctl.h> // ioctl (serial pins, mouse exclusive access)
@@ -221,6 +222,7 @@ static inline void process_mouse_report(mouse_state_t *mouse, struct input_event
 /*** Main init & loop ***/
 
 int main(int argc, char **argv) {
+
   struct termios old_tty;
   char itoa_buffer[6] = {0}; // Re-usable buffer for converting ints to char arr
 
@@ -233,6 +235,13 @@ int main(int argc, char **argv) {
   }
   parse_opts(argc, argv, options);
 
+  // DEBUG
+  FILE *fp;
+  settings_update(); 
+  fp = fopen("filename.bin", "w");
+  fwrite(binary_settings.bytes, binary_settings.size, 1, fp);
+  fclose(fp);
+  // DEBUG
 
   /*** USB mouse device input ***/
   int mouse_fd = open_usbinput(options->mousepath, options->exclusive);

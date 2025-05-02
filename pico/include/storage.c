@@ -17,8 +17,6 @@
 #include "pico/flash.h"
 #include "hardware/flash.h"
 
-#include "../shared/mouse.h"
-
 /* 
    Application code lives on the same flash space, and is always programmed to the front of the flash.
    We should ensure we write our data starting from the end of the flash. There is about 2MB of space.
@@ -37,7 +35,7 @@
 // Pointer to flash storage area
 const uint8_t *flash_target_contents = (const uint8_t *) (XIP_BASE + FLASH_TARGET);
 
-void print_buf(const uint8_t *buf, size_t len) {
+/* void print_buf(const uint8_t *buf, size_t len) {
    for (size_t i = 0; i < len; ++i) {
        printf("%02x", buf[i]);
        if (i % 16 == 15)
@@ -45,7 +43,7 @@ void print_buf(const uint8_t *buf, size_t len) {
        else
            printf(" ");
    }
-}
+} */
 
 // This function will be called when it's safe to call flash_range_erase
 static void call_flash_range_erase(void *param) {
@@ -56,9 +54,10 @@ static void call_flash_range_erase(void *param) {
 // This function will be called when it's safe to call flash_range_program
 static void call_flash_range_program(void *param) {
    uint32_t offset = ((uintptr_t*)param)[0];
-
    const uint8_t *data = (const uint8_t *)((uintptr_t*)param)[1];
-   flash_range_program(offset, data, sizeof(mouse_opts_t));
+   size_t size = ((uintptr_t*)param)[2];
+
+   flash_range_program(offset, data, size);
 }
 
 static void erase_flash_settings() {
@@ -68,71 +67,16 @@ static void erase_flash_settings() {
 }
 
 static void read_flash_settings() {
-   print_buf(flash_target_contents, sizeof(mouse_opts_t));
+   // print_buf(flash_target_contents, sizeof(mouse_opts_t));
+
+   // Return pointer to beginning of settings?
 }
 
-static void settings_to_uint8() {
-
-   /* Magic bytes?
-    *  Easy option? Convert to bitmask?
-    *  
-    *  Minimum page size is a 256 byte write.
-    *
-    *  Layout:
-    *    [canary][version][options][canary][checksum] (crc32?)
-    *
-    *  Bits
-    *    How many protocols do we want to support? At least 3, probably 4.
-    *  
-    *    Sensitivity is between 0.2 and 2.5 with increments/decrements of 0.2.
-    *    Effectively 12.5 values. So 4 bits (for 16 values)
-    *
-    *    Flags: WHEEL, SWAP_BUTTONS
-    *
-    *  PROTO|SENSITIVITY|FLAGS|RESERVED              |
-    *  01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16
-    *
-    *  Version: 1 byte, 0x00-0xFF
-    *
-    *  Mo[version][options]uS[checksum] ?
-   */
-
-   uint8_t config_data[9] = {
-      0x4D, // 0: Canary M
-      0x6F, // 1: Canary o
-      0x00, // 2: Config version 0
-      0x00, // 3: Options 1
-      0x00, // 4: Options 2 (Reserved)
-      0x75, // 5: Canary u
-      0x4F, // 6: Canary S
-      0x00, // 7: CRC-8 checksum
-      0x00  // 8: Null byte
-   }
-
-   config_data[3] |= mouse_options.protocol | mouse_options.sensitivity | mouse_options.wheel | mouse_options.swap_buttons;
-
-   mouse_options_t tester;
-
-   tester.protocol = PROTO_MSWHEEL;
-   tester.wheel = 1;
-   tester.sensitivity = 1.0;
-   tester.swap_buttons = 0;
- 
-}
-
-static void write_flash_settings() {
+static void write_flash_settings(uint8_t *buffer, size_t size) {
    erase_flash_settings(); // Erase is implicit in writing
 
-   /* uint8_t magic[3 + sizeof(mouse_options_t) + 1]
-
-   mouse_options.protocol;     // int
-   mouse_options.sensitivity;  // float 
-   mouse_options.wheel;        // bool
-   mouse_options.swap_buttons; // bool
-   */ 
-
-   uintptr_t params[] = { FLASH_TARGET, (uintptr_t)mouse_options };
+   uintptr_t params[] = { FLASH_TARGET, (uintptr_t)buffer, size };
    // timeout = UINT32_MAX
-   rc = flash_safe_execute(call_flash_range_program, params, UINT32_MAX);
+   int rc = flash_safe_execute(call_flash_range_program, params, UINT32_MAX);
    hard_assert(rc == PICO_OK);
 }
