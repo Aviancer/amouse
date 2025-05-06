@@ -24,6 +24,9 @@
 #include "mouse.h"
 #include "settings.h"
 
+#define SETTINGS_VERSION 0x00
+#define SETTINGS_SIZE 8
+
 #define FLASH_OPT1_BYTE 3
 #define FLASH_OPT2_BYTE 4
 #define FLASH_CRC_BYTE 7
@@ -31,7 +34,41 @@
 // Can't use malloc in embedded so need static alloc
 settings_bin_t binary_settings; // Global updatable binary representation of settings
 
-void settings_update() {
+bool assert_byte(uint8_t byte1, uint8_t byte2) {
+    return(byte1 == byte2);
+}
+
+bool settings_decode(uint8_t *binary, mouse_opts_t *options) {
+
+    // CRC check
+    if(binary[FLASH_CRC_BYTE] != crc8(&binary[0], 7, (uint8_t)0x00)) {
+        // CRC FAILURE
+        return false;
+    }
+
+    bool state = true;
+
+    state &= assert_byte(0x4D, binary[0]);
+    state &= assert_byte(0x6F, binary[1]);
+    state &= assert_byte(SETTINGS_VERSION, binary[2]);
+    uint8_t settings1 = binary[FLASH_OPT1_BYTE];
+    uint8_t settings2 = binary[FLASH_OPT2_BYTE];
+    state &= assert_byte(0x75, binary[5]);
+    state &= assert_byte(0x53, binary[6]);
+
+    if(!state) { return false; }
+
+    uint8_t sens;
+    options->protocol = clampi(settings1 & 0x03, 0, 3);        // 0x03 == 0b11
+    sens = (settings1 >> 2) & 0x0F;                            // Shifting right to get rid of proto, 0x0F == 0b1111
+    options->sensitivity  = clampf(sens * 0.2, 0.2, 2.5);
+    options->wheel        = (bool)(settings1 >> 6) & 0x01;    // Shifting right to get rid of proto and sensitivity, 0x01 is a bool
+    options->swap_buttons = (bool)(settings1 >> 7) & 0x01;    // Shifting right to get rid of proto, sensitivity, and the first flag, 0x01 is a bool 
+
+    return state;
+}
+
+void settings_encode() {
 
     /* Magic bytes?
      *  Easy option? Convert to bitmask?
@@ -58,18 +95,16 @@ void settings_update() {
      *
     */
 
-    //settings_bin_t* data = malloc(sizeof(settings_bin_t));
+    binary_settings.size = SETTINGS_SIZE;
 
-    binary_settings.size = 8;
-
-    binary_settings.bytes[0] = 0x4D; // 00: Canary M
-    binary_settings.bytes[1] = 0x6F; // 01: Canary o
-    binary_settings.bytes[2] = 0x00; // 02: Config version 0x00
-    binary_settings.bytes[3] = 0x00; // 03: Options 1
-    binary_settings.bytes[4] = 0x00; // 04: Options 2 (Reserved)
-    binary_settings.bytes[5] = 0x75; // 05: Canary u
-    binary_settings.bytes[6] = 0x53; // 06: Canary S
-    binary_settings.bytes[7] = 0x00; // 07: CRC-8 Checksum
+    binary_settings.bytes[0] = 0x4D;             // 00: Canary M
+    binary_settings.bytes[1] = 0x6F;             // 01: Canary o
+    binary_settings.bytes[2] = SETTINGS_VERSION; // 02: Config version 0x00
+    binary_settings.bytes[3] = 0x00;             // 03: Options 1
+    binary_settings.bytes[4] = 0x00;             // 04: Options 2 (Reserved)
+    binary_settings.bytes[5] = 0x75;             // 05: Canary u
+    binary_settings.bytes[6] = 0x53;             // 06: Canary S
+    binary_settings.bytes[7] = 0x00;             // 07: CRC-8 Checksum
  
     // Writing options
     // Convert mouse options struct into bitfield that can be written to flash
@@ -86,18 +121,5 @@ void settings_update() {
     // Calculate CRC of configuration data and store it alongside it
     binary_settings.bytes[FLASH_CRC_BYTE] = crc8(&binary_settings.bytes[0], 7, (uint8_t)0x00);
 
-    // return data;
-
-    // Reading?
-
-    /*
-    uint8_t proto, sens, flags;
-    bool flag1, flag2;
-    proto = config & 0x03;        // 0x03 == 0b11
-    sens  = (config >> 2) & 0x0F; // Shifting right to get rid of proto, 0x0F == 0b1111
-    flags = (config >> 6) & 0x03; // Shifting right to get rid of proto and sensitivity, 0x03 == 0b11
-    flag1 = (config >> 6) & 0x01; // Shifting right to get rid of proto and sensitivity, 0x01 is a bool
-    flag2 = (config >> 7) & 0x01; // Shifting right to get rid of proto, sensitivity, and the first flag, 0x01 is a bool 
-    */
- }
+}
  
