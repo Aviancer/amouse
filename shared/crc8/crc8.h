@@ -6,8 +6,13 @@
  * - Aviancer <oss+amouse@skyvian.me>
 */
 
+#ifndef CRC_H_
+#define CRC_H_
+
 #ifdef __linux__
 #include <stdint.h>
 #endif 
 
 uint8_t crc8(uint8_t *msg, int sizeOfMsg, uint8_t init);
+
+#endif // CRC_H_

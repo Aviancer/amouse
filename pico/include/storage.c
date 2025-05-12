@@ -35,16 +35,6 @@
 // Pointer to flash storage area
 const uint8_t *flash_target_contents = (const uint8_t *) (XIP_BASE + FLASH_TARGET);
 
-/* void print_buf(const uint8_t *buf, size_t len) {
-   for (size_t i = 0; i < len; ++i) {
-       printf("%02x", buf[i]);
-       if (i % 16 == 15)
-           printf("\n");
-       else
-           printf(" ");
-   }
-} */
-
 // This function will be called when it's safe to call flash_range_erase
 static void call_flash_range_erase(void *param) {
    uint32_t offset = (uint32_t)param;
@@ -66,10 +56,8 @@ static void erase_flash_settings() {
    hard_assert(rc == PICO_OK);
 }
 
-static void read_flash_settings() {
-   // print_buf(flash_target_contents, sizeof(mouse_opts_t));
-
-   // Return pointer to beginning of settings?
+const uint8_t* ptr_flash_settings() {
+   return flash_target_contents;
 }
 
 static void write_flash_settings(uint8_t *buffer, size_t size) {

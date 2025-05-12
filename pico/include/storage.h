@@ -14,21 +14,14 @@
  *
 */
 
-#ifndef SETTINGS_H_
-#define SETTINGS_H_
+#ifndef STORAGE_H_
+#define STORAGE_H_
 
-#include "mouse.h"
+// Allows reading from flash like from memory address
+const uint8_t* ptr_flash_settings(); 
 
-// Struct for binary settings data
-typedef struct settings_bin {
-    uint8_t bytes[8];
-    size_t size;
-} settings_bin_t;
+static void erase_flash_settings();
 
-// Can't use malloc in embedded so need static alloc
-// extern settings_bin_t binary_settings; // Global binary representation of settings // REMOVE
+static void write_flash_settings(uint8_t *buffer, size_t size);
 
-void settings_encode(settings_bin_t *binary_settings, mouse_opts_t *options);
-bool settings_decode(settings_bin_t *binary_settings, mouse_opts_t *options);
-
-#endif // SETTINGS_H_
+#endif // STORAGE_H_
