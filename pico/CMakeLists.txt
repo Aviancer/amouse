@@ -25,7 +25,7 @@ pico_sdk_init()
 
 add_executable(amouse
   	amouse.c ../shared/mouse.c ../shared/utils.c ../shared/settings.c include/serial.c include/storage.c include/usb.c include/wrappers.c
-        )
+)
 
 target_include_directories(amouse PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 

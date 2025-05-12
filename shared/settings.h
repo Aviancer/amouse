@@ -14,6 +14,8 @@
  *
 */
 
+#include "mouse.h"
+
 // Struct for binary settings data
 typedef struct settings_bin {
     uint8_t bytes[8];
@@ -21,6 +23,7 @@ typedef struct settings_bin {
 } settings_bin_t;
 
 // Can't use malloc in embedded so need static alloc
-extern settings_bin_t binary_settings; // Global binary representation of settings
+// extern settings_bin_t binary_settings; // Global binary representation of settings // REMOVE
 
-void settings_update();
+void settings_encode(settings_bin_t *binary_settings, mouse_opts_t *options);
+bool settings_decode(settings_bin_t *binary_settings, mouse_opts_t *options);

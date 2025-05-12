@@ -47,7 +47,7 @@ R"#( __ _   _ __  ___ _  _ ___ ___
 const char amouse_menu[] =
 R"#(1) Help/Usage
 2) Show current settings
-3) Set sensitivity (1-25)
+3) Set sensitivity (1-30)
 4) Set mouse protocol (0-2)
    Proto(0:MS two-button 1: Logitech three-button 2: MS wheel)
 5) Swap left/right buttons.
@@ -155,7 +155,7 @@ void runtime_settings(mouse_state_t *mouse) {
     if(mouse->wheel != 0) {
       if(mouse->wheel < 0) { mouse_options.sensitivity -= 0.2; }
       else { mouse_options.sensitivity += 0.2; }
-      mouse_options.sensitivity = clampf(mouse_options.sensitivity, 0.2, 2.5);
+      mouse_options.sensitivity = clampf(mouse_options.sensitivity, 0.2, 3.0);
     }
 
     if(mouse->mmb) {
@@ -173,7 +173,7 @@ void input_sensitivity(mouse_state_t *mouse) {
 // Helper function for keeping mouse sensitivity setting consistent.
 void set_sensitivity(scan_int_t scan_i) {
   if(scan_i.found) {
-    mouse_options.sensitivity = clampf(((float)scan_i.value / 10), 0.2, 2.5);
+    mouse_options.sensitivity = clampf(((float)scan_i.value / 10), 0.2, 3.0);
   }
 }
 

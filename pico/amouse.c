@@ -31,6 +31,7 @@
 #include "include/usb.h"
 #include "../shared/utils.h"
 #include "../shared/mouse.h"
+#include "../shared/mouse_defs.h"
 
 #include "bsp/board.h"
 #include "tusb.h"

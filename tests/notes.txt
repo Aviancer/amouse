@@ -1,0 +1,4 @@
+# Cmake setup
+cmake -S . -B build
+# Build tests
+cmake --build build
