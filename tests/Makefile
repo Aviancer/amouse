@@ -11,18 +11,22 @@
 # You should have received a copy of the GNU Lesser General Public License along with this library; 
 # if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
+SRC_DIR          := src
 BUILD_DIR        := build
 
 all: config
 	cmake --build "${BUILD_DIR}"
 
 config:
-	if [ ! -d "${BUILD_DIR}" ]; then cmake -S . -B "${BUILD_DIR}" \
+	if [ ! -d "${BUILD_DIR}" ]; then cmake -S "${SRC_DIR}" -B "${BUILD_DIR}" \
 	else \
 		echo "Config already exists"; \
 	fi 
 
 clean:
-	${RM} -r "${BUILD_DIR}"
+	cd "${BUILD_DIR}" && make clean
 
-.PHONY : config clean
+reset:
+	${RM} -rf "${BUILD_DIR}"
+
+.PHONY : config clean reset

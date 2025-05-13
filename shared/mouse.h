@@ -24,10 +24,29 @@
 
 /*** Shared definitions ***/
 
+extern mouse_opts_t mouse_options; // Global options
+
+extern mouse_proto_t mouse_protocol[3]; // Global options
+extern uint mouse_protocol_num;
+
 extern const char amouse_title[];
 
 extern uint8_t pkt_intellimouse_intro[];
 extern int pkt_intellimouse_intro_len;
+
+/*** Console definitions ***/
+
+typedef struct console_menu {
+  const char   prompt[12];
+  const char*  help_string;
+  uint8_t      parent_menu;
+} console_menu_t;
+
+enum MENU_CONTEXT {
+  CONTEXT_EXIT_MENU  = 0,
+  CONTEXT_MAIN_MENU  = 1,
+  CONTEXT_FLASH_MENU = 2
+};
 
 /* Functions */
 

@@ -17,7 +17,7 @@ FetchContent_MakeAvailable(googletest)
 enable_testing()
 
 add_executable(settings-tests
-  settings-tests.cc ../shared/crc8/libcrc8.c ../shared/mouse_defs.h ../shared/settings.c ../shared/utils.c 
+  src/settings-tests.cc ../shared/crc8/libcrc8.c ../shared/mouse_defs.h ../shared/settings.c ../shared/utils.c 
 )
 target_link_libraries(settings-tests
   GTest::gtest_main

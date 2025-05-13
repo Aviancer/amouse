@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 
 extern "C" {
-  #include "../shared/crc8/crc8.h"
-  #include "../shared/mouse.h"
-  #include "../shared/settings.h"
+  #include "../../shared/crc8/crc8.h"
+  #include "../../shared/mouse.h"
+  #include "../../shared/settings.h"
 }
 
 class SettingsTest : public testing::Test {

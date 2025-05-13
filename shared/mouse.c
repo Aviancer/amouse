@@ -44,22 +44,35 @@ R"#( __ _   _ __  ___ _  _ ___ ___
 / _` | | '  \/ _ \ || (_-</ -_)
 \__,_| |_|_|_\___/\_,_/__/\___=====_____)#";
 
-const char amouse_menu[] =
+const char help_menu[] =
 R"#(1) Help/Usage
 2) Show current settings
 3) Set sensitivity (1-30)
 4) Set mouse protocol (0-2)
    Proto(0:MS two-button 1: Logitech three-button 2: MS wheel)
 5) Swap left/right buttons.
-6) Exit settings/Resume adapter
-0) [TBD] Read or write settings (Flash)
+6) [TBD] Read or write settings (Flash)
+0) Exit settings/Resume adapter
    eg. to set sensitivity to 11, enter: 3 11
 )#";
 
-const char amouse_prompt[] = "amouse> ";
-const char amouse_bye[] = "Bye!\n    Never too late for dreams and play - fly!\n";
+const char help_menu_flash[] =
+R"#(1) Help/Usage
+2) Show settings in flash
+3) Load settings from flash
+4) Write current settings to flash
+0) Return to main menu
+)#";
 
-uint8_t init_mouse_state[] = "\x40\x00\x00\x00"; // Our basic mouse packet (We send 3 or 4 bytes of it)
+console_menu_t console_menu[2] =
+{
+  // Prompt     Help text         Parent context
+  { "amouse> ", help_menu,        CONTEXT_EXIT_MENU },
+  { "flash> ",  help_menu_flash,  CONTEXT_MAIN_MENU }
+};
+uint8_t console_context = CONTEXT_MAIN_MENU; // Default context
+
+const char amouse_bye[] = "Bye!\n    Never too late for dreams and play - fly!\n";
 
 // Define available mouse protocols
 mouse_proto_t mouse_protocol[3] =
@@ -78,6 +91,8 @@ uint8_t pkt_intellimouse_intro[] = {0x4D,0x5A,0x40,0x00,0x00,0x00,0x08,0x01,0x24
                                     0x34,0x00,0x2d,0x2f,0x35,0x33,0x25,0x00,0x37,0x29,0x34,0x28,0x00,0x37,0x28,0x25,
                                     0x25,0x2c,0x12,0x16,0x09};
 int pkt_intellimouse_intro_len = 69;
+
+uint8_t init_mouse_state[] = "\x40\x00\x00\x00"; // Our basic mouse packet (We send 3 or 4 bytes of it)
 
 /*** Global data / BSS (Avoid stack) ***/ 
 
@@ -196,7 +211,16 @@ void console_printvar(int fd, char* prefix, char* variable, char* suffix) {
 }
 
 void console_prompt(int fd) {
-  serial_write_terminal(fd, (uint8_t*)amouse_prompt, sizeof(amouse_prompt)); 
+  serial_write_terminal(fd,
+    (uint8_t*)console_menu[console_context].prompt,
+    sizeof(console_menu[console_context].prompt)); 
+}
+
+void console_help(int fd) {
+  serial_write_terminal(fd,
+    (uint8_t*)console_menu[console_context].help_string, 
+    sizeof(console_menu[console_context].help_string)
+  );
 }
 
 // Process command buffer for backspace
@@ -224,14 +248,71 @@ void console_backspace(uint8_t cmd_buffer[], char* found_ptr, uint* write_pos) {
   *write_pos = pwrite_pos;
 }
 
+void console_menu_main(int fd, scan_int_t* scan_i) {
+  char itoa_buffer[6] = {0}; // Re-usable buffer for converting ints to char arr
+  scan_int_t scan_ii;
+
+  switch(scan_i->value) {
+    case 1: // Help
+      console_help(fd);
+      break;
+    case 2: // Settings
+      serial_write_terminal(fd, (uint8_t*)"[Settings]\n", 11);
+      console_printvar(fd, "  Mouse protocol: ", mouse_protocol[mouse_options.protocol].name, "\n");
+      itoa((int)(mouse_options.sensitivity * 10), itoa_buffer, sizeof(itoa_buffer) - 1);
+      console_printvar(fd, "  Mouse sensitivity: ", itoa_buffer, "\n");
+      console_printvar(fd, "  Mouse buttons: ", (mouse_options.swap_buttons) ? "Swapped" : "Not swapped", "\n");
+      break;
+    case 3: // Sensitivity
+      scan_ii = scan_int(cmd_buffer, scan_i->offset, CMD_BUFFER_LEN, 5);
+      set_sensitivity(scan_ii);
+      itoa((int)(mouse_options.sensitivity * 10), itoa_buffer, sizeof(itoa_buffer) - 1);
+      console_printvar(fd, "Mouse sensitivity set to ", itoa_buffer, ".\n");
+      break;
+    case 4: // Mouse protocol
+      scan_ii = scan_int(cmd_buffer, scan_i->offset, CMD_BUFFER_LEN, 1);
+      if(scan_ii.found) { mouse_options.protocol = clampi(scan_ii.value, 0, 2); }
+      console_printvar(fd, "Mouse protocol set to ", mouse_protocol[mouse_options.protocol].name, ". You may want to re-initialize OS mouse driver.\n");
+      break;
+    case 5: // Swap left/right buttons
+      scan_ii = scan_int(cmd_buffer, scan_i->offset, CMD_BUFFER_LEN, 1);
+      if(scan_ii.found) { mouse_options.swap_buttons = clampi(scan_ii.value, 0, 1); }
+      else { mouse_options.swap_buttons = !mouse_options.swap_buttons; }
+      console_printvar(fd, "Mouse buttons are now ", (mouse_options.swap_buttons) ? "swapped" : "unswapped", ".\n");
+      break;
+    case 6: // Write/load flash
+      console_context = CONTEXT_FLASH_MENU;
+      break;
+    case 0: // Exit
+      console_context = CONTEXT_EXIT_MENU;
+      break;
+    default:
+      serial_write_terminal(fd, (uint8_t*)"Command not valid.\n", 19); 
+  }
+}
+
+void console_menu_flash(int fd, scan_int_t* scan_i) {
+  scan_int_t scan_ii;
+
+  switch(scan_i->value) {
+    case 1: // Help
+      console_help(fd);
+      break;
+    case 0: // Back to parent menu
+      console_context = console_menu[console_context].parent_menu;
+      break;
+    default:
+      serial_write_terminal(fd, (uint8_t*)"Command not valid.\n", 19);
+  }
+}
+
 // Serial console main
 void console(int fd) {
 
   uint write_pos = 0;
   int read_len = 0;
-
+  
   scan_int_t scan_i;
-  char itoa_buffer[6] = {0}; // Re-usable buffer for converting ints to char arr
   
   memset(cmd_buffer, 0, CMD_BUFFER_LEN); // Clear command buffer if we get called multiple times.
 
@@ -239,7 +320,7 @@ void console(int fd) {
   serial_write_terminal(fd, (uint8_t*)"\nv", 2);
   serial_write_terminal(fd, (uint8_t*)V_FULL, sizeof(V_FULL));
   serial_write_terminal(fd, (uint8_t*)"\n", 1);
-  serial_write_terminal(fd, (uint8_t*)amouse_menu, sizeof(amouse_menu));
+  serial_write_terminal(fd, (uint8_t*)help_menu, sizeof(help_menu));
   console_prompt(fd);
 
   while(1) {
@@ -278,7 +359,7 @@ void console(int fd) {
       // Rewrite current line as seen by console
       serial_write_terminal(fd, (uint8_t*)CTRL_L, 1); // Ensure terminal screen gets reset if buffer full (Clear screen)
       serial_write_terminal(fd, (uint8_t*)"\r", 1); // In the case ctrl+l is not handled by terminal.
-      serial_write_terminal(fd, (uint8_t*)amouse_prompt, sizeof(amouse_prompt));
+      console_prompt(fd);
       serial_write_terminal(fd, cmd_buffer, write_pos + 1); // Write prompt up to where ctrl+l was found.
 
       read_len = 0; // Ctrl+l and any additional input was discarded.
@@ -299,43 +380,17 @@ void console(int fd) {
       scan_i = scan_int(cmd_buffer, 0, CMD_BUFFER_LEN, 5);
 
       if(scan_i.found) {
-        switch(scan_i.value) {
-          case 1: // Help
-            serial_write_terminal(fd, (uint8_t*)amouse_menu, sizeof(amouse_menu));
-            break;
-          case 2: // Settings
-            serial_write_terminal(fd, (uint8_t*)"[Settings]\n", 11);
-            console_printvar(fd, "  Mouse protocol: ", mouse_protocol[mouse_options.protocol].name, "\n");
-            itoa((int)(mouse_options.sensitivity * 10), itoa_buffer, sizeof(itoa_buffer) - 1);
-            console_printvar(fd, "  Mouse sensitivity: ", itoa_buffer, "\n");
-            console_printvar(fd, "  Mouse buttons: ", (mouse_options.swap_buttons) ? "Swapped" : "Not swapped", "\n");
-            break;
-          case 3: // Sensitivity
-            scan_i = scan_int(cmd_buffer, scan_i.offset, CMD_BUFFER_LEN, 5);
-            set_sensitivity(scan_i);
-            itoa((int)(mouse_options.sensitivity * 10), itoa_buffer, sizeof(itoa_buffer) - 1);
-            console_printvar(fd, "Mouse sensitivity set to ", itoa_buffer, ".\n");
-            break;
-          case 4: // Mouse protocol
-            scan_i = scan_int(cmd_buffer, scan_i.offset, CMD_BUFFER_LEN, 1);
-            if(scan_i.found) { mouse_options.protocol = clampi(scan_i.value, 0, 2); }
-            console_printvar(fd, "Mouse protocol set to ", mouse_protocol[mouse_options.protocol].name, ". You may want to re-initialize OS mouse driver.\n");
-            break;
-          case 5: // Swap left/right buttons
-            scan_i = scan_int(cmd_buffer, scan_i.offset, CMD_BUFFER_LEN, 1);
-            if(scan_i.found) { mouse_options.swap_buttons = clampi(scan_i.value, 0, 1); }
-            else { mouse_options.swap_buttons = !mouse_options.swap_buttons; }
-            console_printvar(fd, "Mouse buttons are now ", (mouse_options.swap_buttons) ? "swapped" : "unswapped", ".\n");
-            break;
-          case 6: // Exit
+
+        // Input handling in context to current menu
+        switch(console_context) {
+          case CONTEXT_EXIT_MENU:
             serial_write_terminal(fd, (uint8_t*)amouse_bye, sizeof(amouse_bye));
             return;
-            break;
-          case 0: // Write/load flash
-            serial_write_terminal(fd, (uint8_t*)"Not yet implemented.\n", 22); 
+          case CONTEXT_FLASH_MENU:
+            console_menu_flash(fd, &scan_i);
             break;
           default:
-            serial_write_terminal(fd, (uint8_t*)"Command not valid.\n", 19); 
+            console_menu_main(fd, &scan_i);
         }
       }
 

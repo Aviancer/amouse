@@ -135,8 +135,6 @@ static void process_generic_report(uint8_t dev_addr, uint8_t instance, uint8_t c
     switch (rpt_info->usage) {
       case HID_USAGE_DESKTOP_KEYBOARD:
         // Ignore keyboards.
-        // Assume keyboard follow boot report layout
-        //process_kbd_report( (hid_keyboard_report_t const*) report );
       break;
 
       case HID_USAGE_DESKTOP_MOUSE:

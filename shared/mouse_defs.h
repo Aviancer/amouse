@@ -15,9 +15,6 @@ typedef struct mouse_proto {
   int     report_len;
 } mouse_proto_t;
 
-extern mouse_proto_t mouse_protocol[3]; // Global options
-extern uint mouse_protocol_num;
-
 enum MOUSE_PROTOCOLS {
   PROTO_MS2BUTTON = 0, // 2 buttons, 3 bytes
   PROTO_LOGITECH  = 1, // 3 buttons, 3-4 bytes
@@ -55,8 +52,6 @@ typedef struct mouse_opts {
   bool wheel;
   bool swap_buttons;
 } mouse_opts_t;
-
-extern mouse_opts_t mouse_options; // Global options
 
 // States of mouse init request from PC
 enum PC_INIT_STATES {
