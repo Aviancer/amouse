@@ -38,8 +38,9 @@ extern int pkt_intellimouse_intro_len;
 
 typedef struct console_menu {
   const char   prompt[12];
+  const char*  help_string;
+  size_t       help_size;
   uint         parent_menu;
-  const char   help_string[20];
 } console_menu_t;
 
 enum MENU_CONTEXT {

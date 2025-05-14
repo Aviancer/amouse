@@ -64,13 +64,14 @@ R"#(1) Help/Usage
 0) Return to main menu
 )#";
 
-console_menu_t console_menu[2] =
+console_menu_t console_menu[3] =
 {
-  // Prompt     Help text          Parent context
-  { "amouse> ", CONTEXT_EXIT_MENU, "first\x00"  },
-  { "flash> ",  CONTEXT_MAIN_MENU, "second\x00" }
+  // Prompt     Help text        Help size                Parent context
+  { "exit",     "",              0,                       CONTEXT_EXIT_MENU }, // Dummy entry for exit
+  { "amouse",   help_menu,       sizeof(help_menu),       CONTEXT_EXIT_MENU },
+  { "flash",    help_menu_flash, sizeof(help_menu_flash), CONTEXT_MAIN_MENU }
 };
-uint8_t console_context = CONTEXT_MAIN_MENU; // Default context
+int console_context = CONTEXT_MAIN_MENU; // Default context
 
 const char amouse_bye[] = "Bye!\n    Never too late for dreams and play - fly!\n";
 
@@ -213,14 +214,23 @@ void console_printvar(int fd, char* prefix, char* variable, char* suffix) {
 void console_prompt(int fd) {
   serial_write_terminal(fd,
     (uint8_t*)console_menu[console_context].prompt,
-    sizeof(console_menu[console_context].prompt)); 
+    sizeof(console_menu[console_context].prompt));
+  serial_write_terminal(fd, "> ", 2); // Add prompt end
 }
 
 void console_help(int fd) {
+  // Add context to which help we are printing
+  console_printvar(fd, "[", (uint8_t*)console_menu[console_context].prompt, "]\r\n");
   serial_write_terminal(fd,
     (uint8_t*)console_menu[console_context].help_string, 
-    sizeof(console_menu[console_context].help_string)
+    console_menu[console_context].help_size
   );
+}
+
+// Helper to update context and display relevant help
+void console_new_context(int fd, int context) {
+  console_context = context;
+  console_help(fd);
 }
 
 // Process command buffer for backspace
@@ -280,12 +290,12 @@ void console_menu_main(int fd, scan_int_t* scan_i) {
       else { mouse_options.swap_buttons = !mouse_options.swap_buttons; }
       console_printvar(fd, "Mouse buttons are now ", (mouse_options.swap_buttons) ? "swapped" : "unswapped", ".\n");
       break;
-    case 6: // Write/load flash
-      console_context = CONTEXT_FLASH_MENU;
+    case 6: // Menu: Write/load flash
+      console_new_context(fd, CONTEXT_FLASH_MENU);
       break;
     case 0: // Exit
-      console_context = CONTEXT_EXIT_MENU;
-      break;
+      console_new_context(fd, CONTEXT_EXIT_MENU);
+      return;
     default:
       serial_write_terminal(fd, (uint8_t*)"Command not valid.\n", 19); 
   }
@@ -299,8 +309,8 @@ void console_menu_flash(int fd, scan_int_t* scan_i) {
       console_help(fd);
       break;
     case 0: // Back to parent menu
-      console_context = console_menu[console_context].parent_menu;
-      break;
+      console_new_context(fd, console_menu[console_context].parent_menu);
+      return;
     default:
       serial_write_terminal(fd, (uint8_t*)"Command not valid.\n", 19);
   }
@@ -320,7 +330,7 @@ void console(int fd) {
   serial_write_terminal(fd, (uint8_t*)"\nv", 2);
   serial_write_terminal(fd, (uint8_t*)V_FULL, sizeof(V_FULL));
   serial_write_terminal(fd, (uint8_t*)"\n", 1);
-  serial_write_terminal(fd, (uint8_t*)help_menu, sizeof(help_menu));
+  console_new_context(fd, CONTEXT_MAIN_MENU);
   console_prompt(fd);
 
   while(1) {
@@ -384,9 +394,6 @@ void console(int fd) {
         // Input handling in context to current menu
         // We could also use function pointer refs here but this is enough for now.
         switch(console_context) {
-          case CONTEXT_EXIT_MENU:
-            serial_write_terminal(fd, (uint8_t*)amouse_bye, sizeof(amouse_bye));
-            return;
           case CONTEXT_FLASH_MENU:
             console_menu_flash(fd, &scan_i);
             break;
@@ -397,6 +404,13 @@ void console(int fd) {
 
       read_len = write_pos = 0;
       memset(cmd_buffer, 0, CMD_BUFFER_LEN);
+
+      // Exit handling
+      if(console_context == CONTEXT_EXIT_MENU) {
+        serial_write_terminal(fd, (uint8_t*)amouse_bye, sizeof(amouse_bye));
+        return;
+      }
+ 
       console_prompt(fd);
     }
 
