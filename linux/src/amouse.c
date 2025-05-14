@@ -56,7 +56,7 @@ void showhelp(char *argv[]) {
          "  -m <File> to read mouse input from (/dev/input/*)\n" \
          "  -s <File> to write to serial port with (/dev/tty*)\n" \
 	 "  -p <Proto num> Select from available serial protocols (\'-p ?\' for list)\n" \
-	 "  -r <1-25> Set mouse responsiveness/sensitivity\n" \
+	 "  -r <1-30> Set mouse responsiveness/sensitivity\n" \
 	 "  -e Disable exclusive access to mouse\n" \
 	 "  -i Immediate ident mode, disables waiting for CTS pin\n" \
 	 "  -l Swap left and right buttons\n" \
