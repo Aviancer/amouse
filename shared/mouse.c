@@ -64,16 +64,17 @@ R"#(1) Help/Usage
 0) Return to main menu
 )#";
 
+// Serial console menu contexts
 console_menu_t console_menu[3] =
 {
   // Prompt     Help text        Help size                Parent context
   { "exit",     "",              0,                       CONTEXT_EXIT_MENU }, // Dummy entry for exit
-  { "amouse",   help_menu,       sizeof(help_menu),       CONTEXT_EXIT_MENU },
-  { "flash",    help_menu_flash, sizeof(help_menu_flash), CONTEXT_MAIN_MENU }
+  { "amouse",   help_menu,       sizeof(help_menu),       CONTEXT_EXIT_MENU }, // Main menu
+  { "flash",    help_menu_flash, sizeof(help_menu_flash), CONTEXT_MAIN_MENU }  // Flash menu
 };
 int console_context = CONTEXT_MAIN_MENU; // Default context
 
-const char amouse_bye[] = "Bye!\n    Never too late for dreams and play - fly!\n";
+const char amouse_bye[] = "Bye!\n    Never too late to dream and frolic - fly!\n";
 
 // Define available mouse protocols
 mouse_proto_t mouse_protocol[3] =

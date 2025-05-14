@@ -14,7 +14,7 @@ This software will convert USB mouse inputs to a selectable serial mouse protoco
 
 If you do feel a bit more adventurous and would like to build a stand-alone adapter device, I have included the code to do this using a Raspberry Pico microcontroller. A circuit diagram is provided under the `diagrams` folder.
 
-The adapter has been tested to work against DOS, Windows 95 and 98 serial mouse drivers so far.
+The adapter has been tested to work with DOS, Windows 3.1, Windows 95 and 98 serial mouse drivers so far.
 
 # Features
 
@@ -28,7 +28,7 @@ Emulated protocols:
 
 All protocols work on DOS and Windows with the appropriate mouse driver or ctmouse.exe available from the FreeDOS project.
 
-Version 1.5.0 fixes earlier regression in identifying mouse to Windows drivers.
+Version 1.5.0 fixed an earlier regression in identifying mouse to Windows drivers.
 
 # Controls
 
@@ -38,7 +38,7 @@ Once the mouse is initialized - hold down both left and right mouse buttons. The
 - Scroll mouse wheel up to add sensitivity
 - Scroll mouse wheel down to reduce sensitivity
 
-One mouse wheel click adds/reduces sensitivity by a factor of 0.2, you can adjust sensitivity between 0.2 and 2.5. 
+One mouse wheel click adds/reduces sensitivity by a factor of 0.2, you can adjust sensitivity between 0.2 and 3.0.
 
 ## Serial console for configuration
 
@@ -62,7 +62,7 @@ No parity
 No hardware flow control
 ```
 
-Press `enter` to bring up the serial console, the adapter will switch to configuration mode and a menu will open. If you get scrambled characters, check all your terminal settings.
+Press `backspace` (in some terminals `ctrl+backspace`) to bring up the serial console, the adapter will switch to configuration mode and a menu will open. If you get scrambled characters, check all your terminal settings.
 For an example you can enter: `3 11<enter>` to change the mouse sensitivity to 11 (1.1 in the above sensitivity scale).
 
 Enter the `exit command` to the serial console after you are done configuring amouse, returning it to adapter mode. If you changed protocols, you may need to re-initialize the OS mouse driver.
@@ -80,10 +80,10 @@ The mouse is by default captured in exclusive mode so you can use it without wor
 - libevdev (tested with 1.11.0-1, probably works with other versions)
 - Superuser privileges (simple) or access to raw mouse and serial devices (requires changing perms, exercise left up to reader).
 - A serial port on the computer running amouse. You can get away with a cheap USB to Serial adapter.
-- A retro PC or alike for fun or productivity, I recommend using ctmouse.exe driver under DOS. amouse itself works fine for Windows 95, et al also.
+- A retro PC or alike for fun or productivity, I recommend using ctmouse.exe driver under DOS. amouse works fine for Windows 3.1, 95 and 98 drivers also.
 
 ## Preferred 
-- The serial port (retropc)RTS -> CTC(amouse) pin is used by the mouse driver at the other end to signal initializing a mouse, amouse catches this for timing and responds appropriately. However this can also be manually timed.
+- The serial port (retropc)RTS -> CTC(amouse) pin is used by the mouse driver at the other end to signal initializing a mouse, amouse catches this for timing and responds appropriately. However this can also be manually timed if there are no other options.
 
 ## Build & install
 ```
