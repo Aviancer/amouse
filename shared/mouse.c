@@ -66,9 +66,9 @@ R"#(1) Help/Usage
 
 console_menu_t console_menu[2] =
 {
-  // Prompt     Help text         Parent context
-  { "amouse> ", help_menu,        CONTEXT_EXIT_MENU },
-  { "flash> ",  help_menu_flash,  CONTEXT_MAIN_MENU }
+  // Prompt     Help text          Parent context
+  { "amouse> ", CONTEXT_EXIT_MENU, "first\x00"  },
+  { "flash> ",  CONTEXT_MAIN_MENU, "second\x00" }
 };
 uint8_t console_context = CONTEXT_MAIN_MENU; // Default context
 
@@ -382,6 +382,7 @@ void console(int fd) {
       if(scan_i.found) {
 
         // Input handling in context to current menu
+        // We could also use function pointer refs here but this is enough for now.
         switch(console_context) {
           case CONTEXT_EXIT_MENU:
             serial_write_terminal(fd, (uint8_t*)amouse_bye, sizeof(amouse_bye));

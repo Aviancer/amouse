@@ -19,6 +19,7 @@
 
 #include "serial.h"
 #include "../shared/mouse.h"
+#include "../shared/mouse_defs.h" // DEBUG, is this needed?
 
 // Map for iterating through each bit (index) for pin (value)  
 // Should be updated to reflect UART_..._PIN values.
