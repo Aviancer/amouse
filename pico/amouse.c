@@ -30,6 +30,7 @@
 #include "include/serial.h"
 #include "include/storage.h"
 #include "include/usb.h"
+#include "../shared/console.h"
 #include "../shared/utils.h"
 #include "../shared/mouse.h"
 #include "../shared/mouse_defs.h"

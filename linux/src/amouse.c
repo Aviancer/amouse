@@ -26,6 +26,7 @@
 #include "include/version.h"
 #include "include/serial.h"
 #include "include/storage.h"
+#include "../../shared/console.h"
 #include "../../shared/mouse.h"
 #include "../../shared/utils.h"
 #include "../../shared/settings.h"

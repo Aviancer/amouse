@@ -1,5 +1,5 @@
 /*
- * Anachro Mouse, a usb to serial mouse adaptor. Copyright (C) 2021-2025 Aviancer <oss+amouse@skyvian.me>
+ * Anachro Mouse, a usb to serial mouse adaptor. Copyright (C) 2025 Aviancer <oss+amouse@skyvian.me>
  *
  * This library is free software; you can redistribute it and/or modify it under the terms of the 
  * GNU Lesser General Public License as published by the Free Software Foundation; either version 
@@ -14,36 +14,33 @@
  *
 */
 
-#ifndef MOUSE_H_
-#define MOUSE_H_
+#ifndef CONSOLE_H_
+#define CONSOLE_H_
 
-#include <stdbool.h>
-
-#include "mouse_defs.h"
-#include "utils.h"
+//#include "mouse_defs.h"
+//#include "utils.h"
 
 /*** Shared definitions ***/
 
-extern mouse_opts_t mouse_options; // Global options
+extern const char amouse_title[];
 
-extern mouse_proto_t mouse_protocol[3]; // Global options
-extern uint mouse_protocol_num;
+/*** Console definitions ***/
 
-extern uint8_t pkt_intellimouse_intro[];
-extern int pkt_intellimouse_intro_len;
+typedef struct console_menu {
+  const char   prompt[12];
+  const char*  help_string;
+  size_t       help_size;
+  uint         parent_menu;
+} console_menu_t;
+
+enum MENU_CONTEXT {
+  CONTEXT_EXIT_MENU  = 0,
+  CONTEXT_MAIN_MENU  = 1,
+  CONTEXT_FLASH_MENU = 2
+};
 
 /* Functions */
 
-bool update_mouse_state(mouse_state_t *mouse);
+void console(int fd);
 
-void reset_mouse_state(mouse_state_t *mouse);
-
-void runtime_settings(mouse_state_t *mouse);
-
-void input_sensitivity(mouse_state_t *mouse);
-
-void set_sensitivity(scan_int_t scan_i);
-
-void push_update(mouse_state_t *mouse, bool full_packet);
-
-#endif // MOUSE_H_
+#endif // CONSOLE_H_
