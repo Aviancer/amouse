@@ -17,10 +17,10 @@
 /* mouse.c: Architecture independent mouse logic */
 
 #include <stdbool.h>
-#include <stdint.h>
 
 #ifdef __linux__
 #include <stdlib.h>
+#include <stdint.h>
 //#include "../linux/src/include/version.h"
 //#include "../linux/src/include/serial.h"
 //#include "../linux/src/include/storage.h"
