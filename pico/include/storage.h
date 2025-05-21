@@ -18,7 +18,7 @@
 #define STORAGE_H_
 
 // Allows reading from flash like from memory address
-const uint8_t* ptr_flash_settings(); 
+uint8_t* ptr_flash_settings(); 
 
 void write_flash_settings(uint8_t *buffer, size_t size);
 

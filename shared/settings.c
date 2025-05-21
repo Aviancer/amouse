@@ -91,7 +91,7 @@ bool settings_decode(uint8_t *binary_settings, mouse_opts_t *options) {
 }
 
 void settings_encode(uint8_t *binary_settings, mouse_opts_t *options) {
-    
+
     binary_settings[0] = 0x4D;             // 00: Canary M
     binary_settings[1] = 0x6F;             // 01: Canary o
     binary_settings[2] = SETTINGS_VERSION; // 02: Config version 0x00

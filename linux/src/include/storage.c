@@ -42,13 +42,13 @@ void get_config_path(char* filepath) {
         fprintf(stderr, "Home dir lookup failed, using current dir(%s): %d: %s\n", filepath, errno, strerror(errno));
     }
     else {
-        snprintf(filepath, PATH_MAX, "%s/%s", result->pw_dir, ".amouse.conf");
+        snprintf(filepath, PATH_MAX, "%s/%s", result->pw_dir, ".amouse.conf"); // Less portable
     }
 }
 
 // Filesystem backed data access, data is loaded to memory when pointer function is accessed
 // Subsequent calls load any changed data from file. Returns NULL on error.
-const uint8_t* ptr_flash_settings() {
+uint8_t* ptr_flash_settings() {
     char filepath[PATH_MAX] = {0};
     get_config_path(&filepath[0]);
 

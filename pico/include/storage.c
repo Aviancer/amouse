@@ -35,7 +35,7 @@
 #define FLASH_TARGET (PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE)
 
 // Pointer to flash storage area
-const uint8_t *flash_target_contents = (const uint8_t *) (XIP_BASE + FLASH_TARGET);
+uint8_t *flash_target_contents = (uint8_t *) (XIP_BASE + FLASH_TARGET);
 
 // This function will be called when it's safe to call flash_range_erase
 static void call_flash_range_erase(void *param) {
@@ -58,7 +58,7 @@ static void erase_flash_settings() {
    hard_assert(rc == PICO_OK);
 }
 
-const uint8_t* ptr_flash_settings() {
+uint8_t* ptr_flash_settings() {
    return flash_target_contents;
 }
 
