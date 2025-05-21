@@ -17,6 +17,8 @@
 #include "pico/flash.h"
 #include "hardware/flash.h"
 
+#include "../shared/crc8/crc8.h"
+
 /* 
    Application code lives on the same flash space, and is always programmed to the front of the flash.
    We should ensure we write our data starting from the end of the flash. There is about 2MB of space.
@@ -60,7 +62,7 @@ const uint8_t* ptr_flash_settings() {
    return flash_target_contents;
 }
 
-static void write_flash_settings(uint8_t *buffer, size_t size) {
+void write_flash_settings(uint8_t *buffer, size_t size) {
    erase_flash_settings(); // Erase is implicit in writing
 
    uintptr_t params[] = { FLASH_TARGET, (uintptr_t)buffer, size };

@@ -28,10 +28,12 @@
 
 #include "include/version.h"
 #include "include/serial.h"
+#include "include/storage.h"
 #include "include/usb.h"
 #include "../shared/utils.h"
 #include "../shared/mouse.h"
 #include "../shared/mouse_defs.h"
+#include "../shared/settings.h"
 
 #include "bsp/board.h"
 #include "tusb.h"
@@ -129,7 +131,7 @@ void core1_tightloop() {
 
   uint8_t serial_data;
   while(1) {
-    //serial_queue_pop(&serial_data);
+    //serial_queue_pop(&serial_data); // TODO: Bug, does not return correct data.
     queue_remove_blocking(&serial_queue, &serial_data);
     uart_putc_raw(uart0, serial_data); // TODO: Make UART configurable.
   }
@@ -153,10 +155,13 @@ int main() {
   reset_mouse_state(&mouse);
   mouse.pc_state = CTS_UNINIT;
 
-  // Set default options, support mouse wheel.
+  // Set safe default options, support mouse wheel.
   mouse_options.protocol = PROTO_MSWHEEL;
   mouse_options.wheel = 1;
   mouse_options.sensitivity = 1.0;
+
+  // Attempt to load saved settings from storage
+  settings_decode(ptr_flash_settings(), &mouse_options);
 
   // Initialize USB
   tusb_init();

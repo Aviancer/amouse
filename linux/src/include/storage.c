@@ -1,4 +1,4 @@
-/*
+/* 
  * Anachro Mouse, a usb to serial mouse adaptor. Copyright (C) 2025 Aviancer <oss+amouse@skyvian.me>
  *
  * This library is free software; you can redistribute it and/or modify it under the terms of the 
@@ -11,18 +11,16 @@
  *
  * You should have received a copy of the GNU Lesser General Public License along with this library; 
  * if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
- *
 */
 
-#ifndef SETTINGS_H_
-#define SETTINGS_H_
+#include <stdint.h>
+#include <stddef.h>
 
-#include "mouse.h"
+const uint8_t* ptr_flash_settings() {
+    // Stub, not implemented yet
+    return NULL;
+}
 
-#define SETTINGS_VERSION 0x00
-#define SETTINGS_SIZE 8
-
-void settings_encode(uint8_t *binary_settings, mouse_opts_t *options);
-bool settings_decode(uint8_t *binary_settings, mouse_opts_t *options);
-
-#endif // SETTINGS_H_
+void write_flash_settings(uint8_t *buffer, size_t size) {
+    // Stub, not implemented yet
+}

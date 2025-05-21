@@ -23,15 +23,18 @@
 #include <stdlib.h>
 #include "../linux/src/include/version.h"
 #include "../linux/src/include/serial.h"
+#include "../linux/src/include/storage.h"
 #include "../linux/src/include/wrappers.h"
 #else 
 #include "pico/stdlib.h"
 #include "../pico/include/version.h"
 #include "../pico/include/serial.h"
+#include "../pico/include/storage.h"
 #include "../pico/include/wrappers.h"
 #endif 
 
 #include "mouse.h"
+#include "settings.h"
 #include "utils.h"
 
 /*** Shared definitions ***/
@@ -216,12 +219,12 @@ void console_prompt(int fd) {
   serial_write_terminal(fd,
     (uint8_t*)console_menu[console_context].prompt,
     sizeof(console_menu[console_context].prompt));
-  serial_write_terminal(fd, "> ", 2); // Add prompt end
+  serial_write_terminal(fd, (uint8_t*)"> ", 2); // Add prompt end
 }
 
 void console_help(int fd) {
   // Add context to which help we are printing
-  console_printvar(fd, "[", (uint8_t*)console_menu[console_context].prompt, "]\r\n");
+  console_printvar(fd, "[", (char*)console_menu[console_context].prompt, "]\r\n");
   serial_write_terminal(fd,
     (uint8_t*)console_menu[console_context].help_string, 
     console_menu[console_context].help_size
@@ -303,12 +306,26 @@ void console_menu_main(int fd, scan_int_t* scan_i) {
 }
 
 void console_menu_flash(int fd, scan_int_t* scan_i) {
-  scan_int_t scan_ii;
+  uint8_t binary_settings[SETTINGS_SIZE];
 
   switch(scan_i->value) {
     case 1: // Help
       console_help(fd);
       break;
+    case 2:
+        serial_write_terminal(fd, (uint8_t*)"Not implemented.\n", 17);
+    case 3: // Load binary settings from storage
+      if(settings_decode(ptr_flash_settings(), &mouse_options)) {
+        serial_write_terminal(fd, (uint8_t*)"Settings loaded.\n", 17);
+      }
+      else {
+        serial_write_terminal(fd, (uint8_t*)"Error loading.\n", 15);
+      }
+    case 4: // Write binary settings to storage
+      serial_write_terminal(fd, (uint8_t*)"Writing settings.. ", 19);
+      settings_encode(&binary_settings[0], &mouse_options);
+      write_flash_settings(&binary_settings[0], sizeof(binary_settings));
+      serial_write_terminal(fd, (uint8_t*)"Done\n", 5);
     case 0: // Back to parent menu
       console_new_context(fd, console_menu[console_context].parent_menu);
       return;

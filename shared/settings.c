@@ -24,9 +24,6 @@
 #include "mouse.h"
 #include "settings.h"
 
-#define SETTINGS_VERSION 0x00
-#define SETTINGS_SIZE 8
-
 #define FLASH_OPT1_BYTE 3
 #define FLASH_OPT2_BYTE 4
 #define FLASH_CRC_BYTE 7
@@ -62,24 +59,24 @@ bool assert_byte(uint8_t byte1, uint8_t byte2) {
     return(byte1 == byte2);
 }
 
-bool settings_decode(settings_bin_t *binary_settings, mouse_opts_t *options) {
+bool settings_decode(uint8_t *binary_settings, mouse_opts_t *options) {
 
     // CRC check
-    if(binary_settings->bytes[FLASH_CRC_BYTE] != crc8(&binary_settings->bytes[0], 7, (uint8_t)0x00)) {
+    if(binary_settings[FLASH_CRC_BYTE] != crc8(&binary_settings[0], 7, (uint8_t)0x00)) {
         // CRC FAILURE
         return false;
     }
 
     bool state = true;
 
-    state &= assert_byte(0x4D, binary_settings->bytes[0]);
-    state &= assert_byte(0x6F, binary_settings->bytes[1]);
-    state &= assert_byte(SETTINGS_VERSION, binary_settings->bytes[2]);
-    uint8_t settings1 = binary_settings->bytes[FLASH_OPT1_BYTE];
-    uint8_t settings2 = binary_settings->bytes[FLASH_OPT2_BYTE];
+    state &= assert_byte(0x4D, binary_settings[0]);
+    state &= assert_byte(0x6F, binary_settings[1]);
+    state &= assert_byte(SETTINGS_VERSION, binary_settings[2]);
+    uint8_t settings1 = binary_settings[FLASH_OPT1_BYTE];
+    uint8_t settings2 = binary_settings[FLASH_OPT2_BYTE];
     (void) settings2; // Unused, reserved. Silences warning.
-    state &= assert_byte(0x75, binary_settings->bytes[5]);
-    state &= assert_byte(0x53, binary_settings->bytes[6]);
+    state &= assert_byte(0x75, binary_settings[5]);
+    state &= assert_byte(0x53, binary_settings[6]);
 
     if(!state) { return false; }
 
@@ -93,17 +90,16 @@ bool settings_decode(settings_bin_t *binary_settings, mouse_opts_t *options) {
     return state;
 }
 
-void settings_encode(settings_bin_t *binary_settings, mouse_opts_t *options) {
-    binary_settings->size = SETTINGS_SIZE;
-
-    binary_settings->bytes[0] = 0x4D;             // 00: Canary M
-    binary_settings->bytes[1] = 0x6F;             // 01: Canary o
-    binary_settings->bytes[2] = SETTINGS_VERSION; // 02: Config version 0x00
-    binary_settings->bytes[3] = 0x00;             // 03: Options 1
-    binary_settings->bytes[4] = 0x00;             // 04: Options 2 (Reserved)
-    binary_settings->bytes[5] = 0x75;             // 05: Canary u
-    binary_settings->bytes[6] = 0x53;             // 06: Canary S
-    binary_settings->bytes[7] = 0x00;             // 07: CRC-8 Checksum
+void settings_encode(uint8_t *binary_settings, mouse_opts_t *options) {
+    
+    binary_settings[0] = 0x4D;             // 00: Canary M
+    binary_settings[1] = 0x6F;             // 01: Canary o
+    binary_settings[2] = SETTINGS_VERSION; // 02: Config version 0x00
+    binary_settings[3] = 0x00;             // 03: Options 1
+    binary_settings[4] = 0x00;             // 04: Options 2 (Reserved)
+    binary_settings[5] = 0x75;             // 05: Canary u
+    binary_settings[6] = 0x53;             // 06: Canary S
+    binary_settings[7] = 0x00;             // 07: CRC-8 Checksum
  
     // Writing options
     // Convert mouse options struct into bitfield that can be written to flash
@@ -111,14 +107,14 @@ void settings_encode(settings_bin_t *binary_settings, mouse_opts_t *options) {
     // Approximal conversion from float to 0.2 multiplier
     uint8_t sensitivity = clampi((int)(options->sensitivity / 0.2), 1, 15);
  
-    binary_settings->bytes[FLASH_OPT1_BYTE] = 
+    binary_settings[FLASH_OPT1_BYTE] = 
        ((options->protocol    & 0x03) | 
        (sensitivity           & 0x0F) << 2 | 
        (options->wheel        & 0x01) << 6 |
        (options->swap_buttons & 0x01) << 7);
  
     // Calculate CRC of configuration data and store it alongside it
-    binary_settings->bytes[FLASH_CRC_BYTE] = crc8(&binary_settings->bytes[0], 7, (uint8_t)0x00);
+    binary_settings[FLASH_CRC_BYTE] = crc8(&binary_settings[0], 7, (uint8_t)0x00);
 
 }
  

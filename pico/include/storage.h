@@ -20,8 +20,6 @@
 // Allows reading from flash like from memory address
 const uint8_t* ptr_flash_settings(); 
 
-static void erase_flash_settings();
-
-static void write_flash_settings(uint8_t *buffer, size_t size);
+void write_flash_settings(uint8_t *buffer, size_t size);
 
 #endif // STORAGE_H_
