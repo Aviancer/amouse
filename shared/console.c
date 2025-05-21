@@ -32,10 +32,8 @@
 #endif 
 
 #include "console.h"
-//#include "mouse.h"
 #include "settings.h"
 #include "utils.h"
-
 
 /*** Shared definitions ***/
 

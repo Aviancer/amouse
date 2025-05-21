@@ -21,20 +21,11 @@
 #ifdef __linux__
 #include <stdlib.h>
 #include <stdint.h>
-//#include "../linux/src/include/version.h"
-//#include "../linux/src/include/serial.h"
-//#include "../linux/src/include/storage.h"
-//#include "../linux/src/include/wrappers.h"
 #else 
 #include "pico/stdlib.h"
-//#include "../pico/include/version.h"
-//#include "../pico/include/serial.h"
-//#include "../pico/include/storage.h"
-//#include "../pico/include/wrappers.h"
 #endif 
 
 #include "mouse.h"
-//#include "settings.h"
 #include "utils.h"
 
 // Define available mouse protocols

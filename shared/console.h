@@ -17,9 +17,6 @@
 #ifndef CONSOLE_H_
 #define CONSOLE_H_
 
-//#include "mouse_defs.h"
-//#include "utils.h"
-
 /*** Shared definitions ***/
 
 extern const char amouse_title[];
