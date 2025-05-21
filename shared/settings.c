@@ -28,9 +28,6 @@
 #define FLASH_OPT2_BYTE 4
 #define FLASH_CRC_BYTE 7
 
-// Can't use malloc in embedded so need static alloc
-// settings_bin_t binary_settings; // Global updatable binary representation of settings // REMOVE
-
     /*  
      *  Binary settings layout (Version 0x00):
      *    [canary][version][options][canary][crc-8]

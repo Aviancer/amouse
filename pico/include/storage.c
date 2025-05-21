@@ -35,6 +35,7 @@
 #define FLASH_TARGET (PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE)
 
 // Pointer to flash storage area
+// Should likely be a const, but causes issues with interface compatibility for Linux currently
 uint8_t *flash_target_contents = (uint8_t *) (XIP_BASE + FLASH_TARGET);
 
 // This function will be called when it's safe to call flash_range_erase
