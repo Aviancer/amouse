@@ -50,20 +50,19 @@ R"#( __ _   _ __  ___ _  _ ___ ___
 const char help_menu[] =
 R"#(1) Help/Usage
 2) Show current settings
-3) Set sensitivity (1-30)
+3) Set sensitivity (2-30)
 4) Set mouse protocol (0-2)
    Proto(0:MS two-button 1: Logitech three-button 2: MS wheel)
 5) Swap left/right buttons.
-6) [TBD] Read or write settings (Flash)
+6) Read or write settings (Flash)
 0) Exit settings/Resume adapter
    eg. to set sensitivity to 11, enter: 3 11
 )#";
 
 const char help_menu_flash[] =
 R"#(1) Help/Usage
-2) Show settings in flash
-3) Load settings from flash
-4) Write current settings to flash
+2) Load settings from flash
+3) Write current settings to flash
 0) Return to main menu
 )#";
 
@@ -312,20 +311,20 @@ void console_menu_flash(int fd, scan_int_t* scan_i) {
     case 1: // Help
       console_help(fd);
       break;
-    case 2:
-        serial_write_terminal(fd, (uint8_t*)"Not implemented.\n", 17);
-    case 3: // Load binary settings from storage
+    case 2: // Load binary settings from storage
       if(settings_decode(ptr_flash_settings(), &mouse_options)) {
         serial_write_terminal(fd, (uint8_t*)"Settings loaded.\n", 17);
       }
       else {
-        serial_write_terminal(fd, (uint8_t*)"Error loading.\n", 15);
+        serial_write_terminal(fd, (uint8_t*)"Error loading or corrupt data.\n", 34);
       }
-    case 4: // Write binary settings to storage
+      break;
+    case 3: // Write binary settings to storage
       serial_write_terminal(fd, (uint8_t*)"Writing settings.. ", 19);
       settings_encode(&binary_settings[0], &mouse_options);
       write_flash_settings(&binary_settings[0], sizeof(binary_settings));
       serial_write_terminal(fd, (uint8_t*)"Done\n", 5);
+      break;
     case 0: // Back to parent menu
       console_new_context(fd, console_menu[console_context].parent_menu);
       return;

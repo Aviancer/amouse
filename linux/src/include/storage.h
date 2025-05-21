@@ -16,6 +16,8 @@
 #ifndef STORAGE_H_
 #define STORAGE_H_
 
+extern uint8_t flash_storage_buffer; // Expose fake flash storage memory
+
 const uint8_t* ptr_flash_settings();
 
 void write_flash_settings(uint8_t *buffer, size_t size);

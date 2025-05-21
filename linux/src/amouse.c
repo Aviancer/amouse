@@ -25,6 +25,7 @@
 
 #include "include/version.h"
 #include "include/serial.h"
+#include "include/storage.h"
 #include "../../shared/mouse.h"
 #include "../../shared/utils.h"
 #include "../../shared/settings.h"
@@ -49,8 +50,11 @@ struct linux_opts {
 
 /*** Linux console ***/
 
+void aprint(const char *message) {
+  printf("amouse> %s", message);
+}
+
 void showhelp(char *argv[]) {
-  printf("%s\n\n", amouse_title);
   printf("Anachro Mouse v%d.%d.%d, a usb to serial mouse adaptor.\n" \
          "Usage: %s -m <mouse_input> -s <serial_output>\n\n" \
          "  -m <File> to read mouse input from (/dev/input/*)\n" \
@@ -60,7 +64,16 @@ void showhelp(char *argv[]) {
 	 "  -e Disable exclusive access to mouse\n" \
 	 "  -i Immediate ident mode, disables waiting for CTS pin\n" \
 	 "  -l Swap left and right buttons\n" \
+   "  -W Write mouse settings to ~/.amouse.conf file\n"
 	 "  -d Print out debug information on mouse state\n", V_MAJOR, V_MINOR, V_REVISION, argv[0]);
+}
+
+void linux_save_settings() {
+    uint8_t binary_settings[SETTINGS_SIZE] = {0};
+
+    aprint("Writing settings..\n");
+    settings_encode(&binary_settings[0], &mouse_options);
+    write_flash_settings(&binary_settings[0], sizeof(binary_settings));
 }
 
 void parse_opts(int argc, char **argv, struct linux_opts *options) {
@@ -68,13 +81,22 @@ void parse_opts(int argc, char **argv, struct linux_opts *options) {
   int quit = 0;
   scan_int_t scan_i;         // Re-usable ret type for char arr to int conversion
 
-  // Defaults
+  // Safe defaults
   mouse_options.wheel = 1;
   mouse_options.protocol = PROTO_MSWHEEL;
   mouse_options.sensitivity = 1.0;
   options->exclusive = 1;
 
-  while (( option_index = getopt(argc, argv, "hm:s:p:r:ield")) != -1) {
+  // Attempt to load saved settings from storage
+  uint8_t* flash_memory = ptr_flash_settings();
+  if(flash_memory == NULL) {
+    linux_save_settings(); // If no settings loaded, save defaults
+  }
+  else {
+    settings_decode(&flash_memory[0], &mouse_options);
+  }
+
+  while (( option_index = getopt(argc, argv, "hm:s:p:r:ielWd")) != -1) {
 
     switch(option_index) {
       case '?':
@@ -91,7 +113,7 @@ void parse_opts(int argc, char **argv, struct linux_opts *options) {
         scan_i = scan_int((uint8_t*)optarg, 0, 2, 1); // Note: 0-9 only.
         if(scan_i.found && scan_i.value < mouse_protocol_num) {
           mouse_options.protocol = scan_i.value;
-            }
+        }
         else {
           fprintf(stderr, "Available mouse protocols\n");
           for(int i=0; i < mouse_protocol_num; i++) { // < is 0-indexed
@@ -116,6 +138,9 @@ void parse_opts(int argc, char **argv, struct linux_opts *options) {
       case 'd':
 	      options->debug = 1; // Enable debug prints
 	      break;
+      case 'W':
+        linux_save_settings();
+        break;
       default:
         fprintf(stderr, "Invalid option on commandline, ignoring.\n");
     }
@@ -131,11 +156,6 @@ void parse_opts(int argc, char **argv, struct linux_opts *options) {
   }
   if(quit != 0) { exit(0); }
 }
-
-void aprint(const char *message) {
-  printf("amouse> %s", message);
-}
-
 
 /*** USB comms ***/
 
@@ -226,6 +246,8 @@ int main(int argc, char **argv) {
   struct termios old_tty;
   char itoa_buffer[6] = {0}; // Re-usable buffer for converting ints to char arr
 
+  printf("%s\n\n", amouse_title);
+
   // Parse commandline options
   if(argc < 2) { showhelp(argv); exit(0); }
   struct linux_opts *options = (struct linux_opts*) calloc(1, sizeof(struct linux_opts)); // Memory is zeroed by calloc
@@ -282,12 +304,11 @@ int main(int argc, char **argv) {
   mouse_state_t mouse;
   mouse.pc_state = CTS_UNINIT;
   reset_mouse_state(&mouse); // Set packet memory to initial state
-			     //
+
   // Set timers
   time_tx_target = get_target_time(0, NS_SERIALDELAY_3B);
   time_rx_target = get_target_time(1, 0);
   
-  printf("%s\n\n", amouse_title);
   aprint("Selected mouse protocol: "); printf("%s\n", mouse_protocol[mouse_options.protocol].name);
   itoa((int)(mouse_options.sensitivity * 10), itoa_buffer, sizeof(itoa_buffer) - 1);
   aprint("Mouse sensitiviy set to "); printf("%s.\n", itoa_buffer);
