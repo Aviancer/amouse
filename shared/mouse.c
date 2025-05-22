@@ -29,28 +29,28 @@
 #include "utils.h"
 
 // Define available mouse protocols
-mouse_proto_t mouse_protocol[3] =
+mouse_proto_t g_mouse_protocol[3] =
 {
 // Name           Intro Len Btn Wheel  ReportLen
   {"MS 2-button", "M",  1,  2,  false, 3}, // MS_2BUTTON = 0
   {"Logitech",    "M3", 2,  3,  false, 3}, // LOGITECH   = 1, report is 3-4
   {"MS wheeled",  "MZ", 2,  3,  true,  4}  // MS_WHEELED = 2
 };
-uint mouse_protocol_num = sizeof mouse_protocol / sizeof mouse_protocol[0];
+uint g_mouse_protocol_num = sizeof g_mouse_protocol / sizeof g_mouse_protocol[0];
 
 // Full Serial Mouse intro with PnP information (Microsoft IntelliMouse)
-uint8_t pkt_intellimouse_intro[] = {0x4D,0x5A,0x40,0x00,0x00,0x00,0x08,0x01,0x24,0x2d,0x33,0x28,0x10,0x10,0x10,0x11,
+uint8_t g_pkt_intellimouse_intro[] = {0x4D,0x5A,0x40,0x00,0x00,0x00,0x08,0x01,0x24,0x2d,0x33,0x28,0x10,0x10,0x10,0x11,
                                     0x3c,0x21,0x36,0x29,0x21,0x2e,0x23,0x25,0x32,0x3c,0x2d,0x2f,0x35,0x33,0x25,0x3c,
                                     0x30,0x2e,0x30,0x10,0x26,0x10,0x21,0x3c,0x2d,0x29,0x23,0x32,0x2f,0x33,0x2f,0x26,
                                     0x34,0x00,0x2d,0x2f,0x35,0x33,0x25,0x00,0x37,0x29,0x34,0x28,0x00,0x37,0x28,0x25,
                                     0x25,0x2c,0x12,0x16,0x09};
-int pkt_intellimouse_intro_len = 69;
+int g_pkt_intellimouse_intro_len = 69;
 
 uint8_t init_mouse_state[] = "\x40\x00\x00\x00"; // Our basic mouse packet (We send 3 or 4 bytes of it)
 
 /*** Global data / BSS (Avoid stack) ***/ 
 
-mouse_opts_t mouse_options; // Global user settable options.
+mouse_opts_t g_mouse_options; // Global user settable options.
 
 
 /*** Shared mouse functions ***/
@@ -60,7 +60,7 @@ bool update_mouse_state(mouse_state_t *mouse) {
   int movement;
 
   // Set mouse button states    
-  if(mouse_options.swap_buttons) {
+  if(g_mouse_options.swap_buttons) {
     mouse->state[0] |= (mouse->rmb << MOUSE_LMB_BIT);
     mouse->state[0] |= (mouse->lmb << MOUSE_RMB_BIT);
   }
@@ -83,7 +83,7 @@ bool update_mouse_state(mouse_state_t *mouse) {
   mouse->state[2] = mouse->state[2] | (mouse->y & 0x3f);
 
   // Protocol specific handling
-  switch(mouse_options.protocol) {
+  switch(g_mouse_options.protocol) {
     case PROTO_LOGITECH: 
       if(mouse->mmb) {
 	      mouse->state[3] = 0x20;
@@ -94,11 +94,11 @@ bool update_mouse_state(mouse_state_t *mouse) {
       mouse->wheel = clampi(mouse->wheel, -15, 15);
       mouse->state[3] |= (mouse->mmb << MOUSE_MMB_BIT);
       mouse->state[3] = mouse->state[3] | (-mouse->wheel & 0x0f); // 127(negatives) when scrolling up, 1(positives) when scrolling down.
-      mouse->update = mouse_protocol[mouse_options.protocol].report_len;
+      mouse->update = g_mouse_protocol[g_mouse_options.protocol].report_len;
       break;
     default:
       // Get protocol default report length
-      mouse->update = mouse_protocol[mouse_options.protocol].report_len;
+      mouse->update = g_mouse_protocol[g_mouse_options.protocol].report_len;
   }
 
   return(true);
@@ -119,9 +119,9 @@ void runtime_settings(mouse_state_t *mouse) {
   if(mouse->lmb && mouse->rmb) {
     // Handle sensitivity changes
     if(mouse->wheel != 0) {
-      if(mouse->wheel < 0) { mouse_options.sensitivity -= 0.2; }
-      else { mouse_options.sensitivity += 0.2; }
-      mouse_options.sensitivity = clampf(mouse_options.sensitivity, 0.2, 3.0);
+      if(mouse->wheel < 0) { g_mouse_options.sensitivity -= 0.2; }
+      else { g_mouse_options.sensitivity += 0.2; }
+      g_mouse_options.sensitivity = clampf(g_mouse_options.sensitivity, 0.2, 3.0);
     }
 
     if(mouse->mmb) {
@@ -132,14 +132,14 @@ void runtime_settings(mouse_state_t *mouse) {
 
 // Adjust mouse input based on sensitivity
 void input_sensitivity(mouse_state_t *mouse) {
-  mouse->x = mouse->x * mouse_options.sensitivity;
-  mouse->y = mouse->y * mouse_options.sensitivity;
+  mouse->x = mouse->x * g_mouse_options.sensitivity;
+  mouse->y = mouse->y * g_mouse_options.sensitivity;
 }
 
 // Helper function for keeping mouse sensitivity setting consistent.
 void set_sensitivity(scan_int_t scan_i) {
   if(scan_i.found) {
-    mouse_options.sensitivity = clampf(((float)scan_i.value / 10), 0.2, 3.0);
+    g_mouse_options.sensitivity = clampf(((float)scan_i.value / 10), 0.2, 3.0);
   }
 }
 

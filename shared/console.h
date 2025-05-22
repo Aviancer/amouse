@@ -19,7 +19,7 @@
 
 /*** Shared definitions ***/
 
-extern const char amouse_title[];
+extern const char g_amouse_title[];
 
 /*** Console definitions ***/
 

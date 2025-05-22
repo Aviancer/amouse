@@ -88,7 +88,7 @@ static inline void process_mouse_report(mouse_state_t *mouse, hid_mouse_report_t
 
     if((button_changed_mask & MOUSE_BUTTON_MIDDLE)) {
       mouse->mmb = test_mouse_button(p_report->buttons, MOUSE_BUTTON_MIDDLE);
-      if(mouse_protocol[mouse_options.protocol].buttons > 2) {
+      if(g_mouse_protocol[g_mouse_options.protocol].buttons > 2) {
         push_update(mouse, true); 
       }
     }
@@ -109,7 +109,7 @@ static inline void process_mouse_report(mouse_state_t *mouse, hid_mouse_report_t
   if(p_report->wheel) {
     mouse->wheel += p_report->wheel;
     mouse->wheel  = clampi(mouse->wheel, -63, 63);
-    if(mouse_protocol[mouse_options.protocol].wheel) {
+    if(g_mouse_protocol[g_mouse_options.protocol].wheel) {
       push_update(mouse, true); 
     }
   }
@@ -132,8 +132,8 @@ void core1_tightloop() {
 
   uint8_t serial_data;
   while(1) {
-    //serial_queue_pop(&serial_queue, &serial_data); // TODO: Test if returns correct data now
-    queue_remove_blocking(&serial_queue, &serial_data);
+    //g_serial_queue_pop(&g_serial_queue, &serial_data); // TODO: Test if returns correct data now
+    queue_remove_blocking(&g_serial_queue, &serial_data);
     uart_putc_raw(uart0, serial_data); // TODO: Make UART configurable.
   }
 }
@@ -146,7 +146,7 @@ int main() {
   mouse_serial_init(0); // uart0
 
   // Initialize the global serial data queue
-  queue_init(&serial_queue, sizeof(uint8_t), 80);
+  queue_init(&g_serial_queue, sizeof(uint8_t), 80);
 
   // Should be launched before any interrupts
   multicore_launch_core1(core1_tightloop);
@@ -157,12 +157,12 @@ int main() {
   mouse.pc_state = CTS_UNINIT;
 
   // Set safe default options, support mouse wheel.
-  mouse_options.protocol = PROTO_MSWHEEL;
-  mouse_options.wheel = 1;
-  mouse_options.sensitivity = 1.0;
+  g_mouse_options.protocol = PROTO_MSWHEEL;
+  g_mouse_options.wheel = 1;
+  g_mouse_options.sensitivity = 1.0;
 
   // Attempt to load saved settings from storage
-  settings_decode(ptr_flash_settings(), &mouse_options);
+  settings_decode(ptr_flash_settings(), &g_mouse_options);
 
   // Initialize USB
   tusb_init();
@@ -204,7 +204,7 @@ int main() {
     if(!cts_pin && (mouse.pc_state != CTS_UNINIT && mouse.pc_state != CTS_TOGGLED)) {
       gpio_put(LED_PIN, false); // DEBUG
       mouse.pc_state = CTS_TOGGLED;
-      mouse_ident(0, mouse_options.wheel);
+      mouse_ident(0, g_mouse_options.wheel);
     }
 
     // Transmit only once we are initialized at least once. Unlike in DOS, Windows drivers will set CTS pin 

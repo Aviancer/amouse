@@ -43,7 +43,7 @@ enum UART_BITS {
   UART_RTS_BIT = 6
 };
 
-extern queue_t serial_queue; // Global serial data queue
+extern queue_t g_serial_queue; // Global serial data queue
 
 uart_inst_t* get_uart(int uart_id);
 

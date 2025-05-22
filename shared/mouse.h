@@ -24,13 +24,13 @@
 
 /*** Shared definitions ***/
 
-extern mouse_opts_t mouse_options; // Global options
+extern mouse_opts_t g_mouse_options; // Global options
 
-extern mouse_proto_t mouse_protocol[3]; // Global options
-extern uint mouse_protocol_num;
+extern mouse_proto_t g_mouse_protocol[3]; // Global options
+extern uint g_mouse_protocol_num;
 
-extern uint8_t pkt_intellimouse_intro[];
-extern int pkt_intellimouse_intro_len;
+extern uint8_t g_pkt_intellimouse_intro[];
+extern int g_pkt_intellimouse_intro_len;
 
 /* Functions */
 

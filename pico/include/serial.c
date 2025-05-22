@@ -35,7 +35,7 @@ const uint8_t chr_carriage_return = (uint8_t)'\r';
 #define PARITY UART_PARITY_NONE
 
 // Multi-core serial data queue 
-queue_t serial_queue;
+queue_t g_serial_queue;
 
 /*** Serial comms ***/
 
@@ -72,7 +72,7 @@ int serial_write(int uart_id, uint8_t *buffer, int size) {
   int bytes=0;
   for(; bytes < size; bytes++) {
     // Offload serial write to Core 1
-    queue_add_blocking(&serial_queue, &buffer[bytes]);
+    queue_add_blocking(&g_serial_queue, &buffer[bytes]);
   }
   return bytes;
 }
@@ -86,11 +86,11 @@ int serial_write_terminal(int uart_id, uint8_t *buffer, int size) {
     if(buffer[pos] == '\0') { return bytes; }
     // Convert LF to CRLF
     else if(buffer[pos] == '\n') {
-      queue_add_blocking(&serial_queue, &chr_carriage_return);
+      queue_add_blocking(&g_serial_queue, &chr_carriage_return);
       bytes++;
     }
     // Offload serial write to Core 1
-    queue_add_blocking(&serial_queue, &buffer[pos]);
+    queue_add_blocking(&g_serial_queue, &buffer[pos]);
     bytes++;
   } 
   return bytes;
@@ -116,7 +116,7 @@ int serial_read(int uart_id, uint8_t *buffer, int size) {
 // Prefer less direct access to queue internals from rest of the program,
 // for the moment just a wrap-around but easier to work with as a endpoint for changes later.
 void serial_queue_pop(queue_t *queue, uint8_t *buffer) {
-  queue_remove_blocking(&queue, &buffer); // TODO: Test if returns correct data now
+  queue_remove_blocking(queue, buffer); // TODO: Test if returns correct data now
 }
 
 int get_pins(int flag) {
@@ -156,19 +156,19 @@ void wait_pin_state(int flag, int desired_state) {
 void mouse_ident(int uart_id, bool wheel_enabled) {
   /*** Mouse proto negotiation ***/
  
-  if(mouse_options.protocol == PROTO_MSWHEEL) {
+  if(g_mouse_options.protocol == PROTO_MSWHEEL) {
     int bytes=0;
-    for(; bytes < pkt_intellimouse_intro_len; bytes++) {
+    for(; bytes < g_pkt_intellimouse_intro_len; bytes++) {
       // Interrupt long write if no longer requested to ident.
       if(gpio_get(UART_CTS_PIN)) { break; } 
-      queue_add_blocking(&serial_queue, &pkt_intellimouse_intro[bytes]);
+      queue_add_blocking(&g_serial_queue, &g_pkt_intellimouse_intro[bytes]);
     }
   }
   else {
     serial_write(
       uart_id,
-      mouse_protocol[mouse_options.protocol].serial_ident,
-      mouse_protocol[mouse_options.protocol].serial_ident_len
+      g_mouse_protocol[g_mouse_options.protocol].serial_ident,
+      g_mouse_protocol[g_mouse_options.protocol].serial_ident_len
     );
   }
 

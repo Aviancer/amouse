@@ -13,7 +13,7 @@
  * if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-/* Filesystem backed software flash memory layer for Linux, emulating Pico flash memory access */
+/* storage.c: Filesystem backed software flash memory layer for Linux, emulating Pico flash memory access */
 
 #include <errno.h>
 #include <stdio.h>
@@ -36,7 +36,7 @@ void get_config_path(char* filepath) {
     if(pwdbuffer_size == -1) {  // If not provided by OS
         pwdbuffer_size = 16384; // Plenty of margins
     }
-    char pwdbuffer[pwdbuffer_size]; // At time of writing value was 70.
+    char pwdbuffer[pwdbuffer_size]; // At time of writing size was 70 on Linux
 
     uid_t uid = getuid();
 
@@ -46,7 +46,7 @@ void get_config_path(char* filepath) {
         fprintf(stderr, "Home dir lookup failed, using current dir(%s): %d: %s\n", filepath, errno, strerror(errno));
     }
     else {
-        snprintf(filepath, PATH_MAX, "%s/%s", result->pw_dir, ".amouse.conf"); // Less portable
+        snprintf(filepath, PATH_MAX, "%s/%s", result->pw_dir, ".amouse.conf"); // Bit more secure, less portable
     }
 }
 

@@ -73,7 +73,7 @@ void linux_save_settings() {
     uint8_t binary_settings[SETTINGS_SIZE] = {0};
 
     aprint("Writing settings..\n");
-    settings_encode(&binary_settings[0], &mouse_options);
+    settings_encode(&binary_settings[0], &g_mouse_options);
     write_flash_settings(&binary_settings[0], sizeof(binary_settings));
 }
 
@@ -83,9 +83,9 @@ void parse_opts(int argc, char **argv, struct linux_opts *options) {
   scan_int_t scan_i;         // Re-usable ret type for char arr to int conversion
 
   // Safe defaults
-  mouse_options.wheel = 1;
-  mouse_options.protocol = PROTO_MSWHEEL;
-  mouse_options.sensitivity = 1.0;
+  g_mouse_options.wheel = 1;
+  g_mouse_options.protocol = PROTO_MSWHEEL;
+  g_mouse_options.sensitivity = 1.0;
   options->exclusive = 1;
 
   // Attempt to load saved settings from storage
@@ -94,7 +94,7 @@ void parse_opts(int argc, char **argv, struct linux_opts *options) {
     linux_save_settings(); // If no settings loaded, save defaults
   }
   else {
-    settings_decode(&flash_memory[0], &mouse_options);
+    settings_decode(&flash_memory[0], &g_mouse_options);
   }
 
   while (( option_index = getopt(argc, argv, "hm:s:p:r:ielWd")) != -1) {
@@ -112,13 +112,13 @@ void parse_opts(int argc, char **argv, struct linux_opts *options) {
         break;
       case 'p':
         scan_i = scan_int((uint8_t*)optarg, 0, 2, 1); // Note: 0-9 only.
-        if(scan_i.found && scan_i.value < mouse_protocol_num) {
-          mouse_options.protocol = scan_i.value;
+        if(scan_i.found && scan_i.value < g_mouse_protocol_num) {
+          g_mouse_options.protocol = scan_i.value;
         }
         else {
           fprintf(stderr, "Available mouse protocols\n");
-          for(int i=0; i < mouse_protocol_num; i++) { // < is 0-indexed
-                  fprintf(stderr, "  %i: %s\n", i, mouse_protocol[i].name);
+          for(int i=0; i < g_mouse_protocol_num; i++) { // < is 0-indexed
+                  fprintf(stderr, "  %i: %s\n", i, g_mouse_protocol[i].name);
           }
           exit(1);
         }
@@ -134,7 +134,7 @@ void parse_opts(int argc, char **argv, struct linux_opts *options) {
       	options->exclusive = 0; // Computer will also get mouse inputs.
 	      break;
       case 'l':
-      	mouse_options.swap_buttons = 1;
+        g_mouse_options.swap_buttons = 1;
       	break;
       case 'd':
 	      options->debug = 1; // Enable debug prints
@@ -208,7 +208,7 @@ static inline void process_mouse_report(mouse_state_t *mouse, struct input_event
       case BTN_MIDDLE:
         mouse->mmb = ev->value;
         mouse->force_update = true;
-        if(mouse_protocol[mouse_options.protocol].buttons > 2) { 
+        if(g_mouse_protocol[g_mouse_options.protocol].buttons > 2) {
           push_update(mouse, true); // Every time MMB changes (on or off), must send 4 bytes.
         } 
         break;
@@ -231,7 +231,7 @@ static inline void process_mouse_report(mouse_state_t *mouse, struct input_event
       case REL_WHEEL:
         mouse->wheel += ev->value;
         mouse->wheel = clampi(mouse->wheel, -63, 63);
-        if(mouse_protocol[mouse_options.protocol].wheel) {
+        if(g_mouse_protocol[g_mouse_options.protocol].wheel) {
           push_update(mouse, true);
         }
         break;
@@ -247,7 +247,7 @@ int main(int argc, char **argv) {
   struct termios old_tty;
   char itoa_buffer[6] = {0}; // Re-usable buffer for converting ints to char arr
 
-  printf("%s\n\n", amouse_title);
+  printf("%s\n\n", g_amouse_title);
 
   // Parse commandline options
   if(argc < 2) { showhelp(argv); exit(0); }
@@ -310,15 +310,15 @@ int main(int argc, char **argv) {
   time_tx_target = get_target_time(0, NS_SERIALDELAY_3B);
   time_rx_target = get_target_time(1, 0);
   
-  aprint("Selected mouse protocol: "); printf("%s\n", mouse_protocol[mouse_options.protocol].name);
-  itoa((int)(mouse_options.sensitivity * 10), itoa_buffer, sizeof(itoa_buffer) - 1);
+  aprint("Selected mouse protocol: "); printf("%s\n", g_mouse_protocol[g_mouse_options.protocol].name);
+  itoa((int)(g_mouse_options.sensitivity * 10), itoa_buffer, sizeof(itoa_buffer) - 1);
   aprint("Mouse sensitiviy set to "); printf("%s.\n", itoa_buffer);
   aprint("Waiting for PC to initialize mouse driver..\n");
 
   // Ident immediately on program start up.
   if(options->immediate) {
     aprint("Performing immediate identification as mouse.\n");
-    mouse_ident(serial_fd, mouse_options.wheel);
+    mouse_ident(serial_fd, g_mouse_options.wheel);
     mouse.pc_state = CTS_TOGGLED; // Bypass CTS detection, send events straight away.
   }
 
@@ -356,7 +356,7 @@ int main(int argc, char **argv) {
       	aprint("Computers RTS pin toggled, identifying as mouse.\n");
       }
       mouse.pc_state = CTS_TOGGLED;
-      mouse_ident(serial_fd, mouse_options.wheel);
+      mouse_ident(serial_fd, g_mouse_options.wheel);
       aprint("Mouse initialized. Good to go!\n");
     }
 
@@ -374,7 +374,7 @@ int main(int argc, char **argv) {
         update_mouse_state(&mouse);
          
         // Send updates
-        if(options->debug) { fprintf(stderr, "Sensitivity: %f\n", mouse_options.sensitivity); }
+        if(options->debug) { fprintf(stderr, "Sensitivity: %f\n", g_mouse_options.sensitivity); }
           for(i=0; i < mouse.update; i++) {
             if(options->debug) {
               fprintf(stderr, "Time: %d.%d\n", (int)time_tx_target.tv_sec, (int)time_tx_target.tv_nsec);

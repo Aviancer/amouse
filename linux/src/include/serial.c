@@ -124,18 +124,18 @@ void wait_pin_state(int fd, int flag, int desired_state) {
 }
 
 void mouse_ident(int fd, bool wheel_enabled) {
-  if(mouse_options.protocol == PROTO_MSWHEEL) {
+  if(g_mouse_options.protocol == PROTO_MSWHEEL) {
     int bytes=0;
-    for(; bytes < pkt_intellimouse_intro_len; bytes++) {
+    for(; bytes < g_pkt_intellimouse_intro_len; bytes++) {
       if(!get_pin(fd, TIOCM_CTS)) { break; }
-      write(fd, &pkt_intellimouse_intro[bytes], 1);
+      write(fd, &g_pkt_intellimouse_intro[bytes], 1);
     }
   }
   else {
     write(
       fd, 
-      mouse_protocol[mouse_options.protocol].serial_ident,
-      mouse_protocol[mouse_options.protocol].serial_ident_len
+      g_mouse_protocol[g_mouse_options.protocol].serial_ident,
+      g_mouse_protocol[g_mouse_options.protocol].serial_ident_len
     );
   }
 }
