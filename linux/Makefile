@@ -24,7 +24,7 @@ INCLUDES = -levdev -I/usr/include/libevdev-1.0/libevdev -I./include
 
 TARGET = amouse
 
-all: serial.o utils.o mouse.o ${TARGET}
+all: serial.o utils.o mouse.o storage.o ${TARGET}
 
 ${TARGET}: ${SRC_DIR}/${TARGET}.c
 	${CC} ${CFLAGS} -o ${BIN_DIR}/${TARGET} ${C_SOURCES} ${C_SHARED} ${INCLUDES} 
@@ -32,11 +32,14 @@ ${TARGET}: ${SRC_DIR}/${TARGET}.c
 utils.o: ${SRC_DIR}/../../shared/utils.c ${SRC_DIR}/../../shared/utils.h
 	${CC} ${CFLAGS} -c ${SRC_DIR}/../../shared/utils.c -o ${SRC_DIR}/include/utils.o
 
+mouse.o: ${SRC_DIR}/../../shared/mouse.c ${SRC_DIR}/../../shared/mouse.h
+	${CC} ${CFLAGS} -c ${SRC_DIR}/../../shared/mouse.c -o ${SRC_DIR}/include/mouse.o
+
 serial.o: ${SRC_DIR}/include/serial.c ${SRC_DIR}/include/serial.h
 	${CC} ${CFLAGS} -c ${SRC_DIR}/include/serial.c -o ${SRC_DIR}/include/serial.o
 
-mouse.o: ${SRC_DIR}/../../shared/mouse.c ${SRC_DIR}/../../shared/mouse.h
-	${CC} ${CFLAGS} -c ${SRC_DIR}/../../shared/mouse.c -o ${SRC_DIR}/include/mouse.o
+storage.o: ${SRC_DIR}/include/storage.c ${SRC_DIR}/include/storage.h
+	${CC} ${CFLAGS} -c ${SRC_DIR}/include/storage.c -o ${SRC_DIR}/include/storage.o
 
 clean:
 	${RM} ${BIN_DIR}/${TARGET}

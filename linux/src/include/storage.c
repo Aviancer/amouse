@@ -31,9 +31,13 @@ uint8_t flash_storage_buffer[SETTINGS_SIZE] = {0};
 void get_config_path(char* filepath) {
     struct passwd pwd;
     struct passwd* result;
+    size_t pwdbuffer_size = sysconf(_SC_GETPW_R_SIZE_MAX);
 
-    char pwdbuffer[_SC_GETPW_R_SIZE_MAX];   // Supported by Linux, other OS?
-                                            // At time of writing value was 70.
+    if(pwdbuffer_size == -1) {  // If not provided by OS
+        pwdbuffer_size = 16384; // Plenty of margins
+    }
+    char pwdbuffer[pwdbuffer_size]; // At time of writing value was 70.
+
     uid_t uid = getuid();
 
     getpwuid_r(uid, &pwd, &pwdbuffer[0], sizeof(pwdbuffer), &result);

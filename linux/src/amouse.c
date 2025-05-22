@@ -57,16 +57,16 @@ void aprint(const char *message) {
 
 void showhelp(char *argv[]) {
   printf("Anachro Mouse v%d.%d.%d, a usb to serial mouse adaptor.\n" \
-         "Usage: %s -m <mouse_input> -s <serial_output>\n\n" \
-         "  -m <File> to read mouse input from (/dev/input/*)\n" \
-         "  -s <File> to write to serial port with (/dev/tty*)\n" \
-	 "  -p <Proto num> Select from available serial protocols (\'-p ?\' for list)\n" \
-	 "  -r <1-30> Set mouse responsiveness/sensitivity\n" \
-	 "  -e Disable exclusive access to mouse\n" \
-	 "  -i Immediate ident mode, disables waiting for CTS pin\n" \
-	 "  -l Swap left and right buttons\n" \
-   "  -W Write mouse settings to ~/.amouse.conf file\n"
-	 "  -d Print out debug information on mouse state\n", V_MAJOR, V_MINOR, V_REVISION, argv[0]);
+    "Usage: %s -m <mouse_input> -s <serial_output>\n\n" \
+    "  -m <File> to read mouse input from (/dev/input/*)\n" \
+    "  -s <File> to write to serial port with (/dev/tty*)\n" \
+    "  -p <Proto num> Select from available serial protocols (\'-p ?\' for list)\n" \
+    "  -r <1-30> Set mouse responsiveness/sensitivity\n" \
+    "  -e Disable exclusive access to mouse\n" \
+    "  -i Immediate ident mode, disables waiting for CTS pin\n" \
+    "  -l Swap left and right buttons\n" \
+    "  -W Write mouse settings to ~/.amouse.conf file\n"
+    "  -d Print out debug information on mouse state\n", V_MAJOR, V_MINOR, V_REVISION, argv[0]);
 }
 
 void linux_save_settings() {
