@@ -42,10 +42,9 @@
 // Technically could support multiple mice connected to the same system if we kept more mouse states in memory.
 
 
-/*** Global state variables ****/
+/*** Mouse state variables ****/
 
-extern mouse_state_t mouse; // Needs to be available for serial functions.
-mouse_state_t mouse;        // int values default to 0 
+mouse_state_t mouse; // int values default to 0 
 
 static uint32_t time_tx_target;  // Serial transmit timers target time
 static uint32_t time_rx_target;  // Serial receive timers target time
