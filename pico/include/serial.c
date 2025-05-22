@@ -113,8 +113,10 @@ int serial_read(int uart_id, uint8_t *buffer, int size) {
 }
 
 /* Pop the next entry from the serial data queue */
-void serial_queue_pop(uint8_t *buffer) {
-  queue_remove_blocking(&serial_queue, &buffer); // TODO: BUG, does not return correct data
+// Prefer less direct access to queue internals from rest of the program,
+// for the moment just a wrap-around but easier to work with as a endpoint for changes later.
+void serial_queue_pop(queue_t *queue, uint8_t *buffer) {
+  queue_remove_blocking(&queue, &buffer); // TODO: Test if returns correct data now
 }
 
 int get_pins(int flag) {
