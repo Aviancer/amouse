@@ -221,12 +221,12 @@ static inline void process_mouse_report(mouse_state_t *mouse, struct input_event
       case REL_X:
         mouse->x += ev->value;
         mouse->x = clampi(mouse->x, -36862, 36862);
-              push_update(mouse, mouse->mmb);
+        push_update(mouse, mouse->mmb);
         break;
       case REL_Y:
         mouse->y += ev->value;
         mouse->y = clampi(mouse->y, -36862, 36862);
-              push_update(mouse, mouse->mmb);
+        push_update(mouse, mouse->mmb);
         break;
       case REL_WHEEL:
         mouse->wheel += ev->value;
