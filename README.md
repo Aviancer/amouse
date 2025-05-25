@@ -16,6 +16,16 @@ If you do feel a bit more adventurous and would like to build a stand-alone adap
 
 The adapter has been tested to work with DOS, Windows 3.1, Windows 95 and 98 serial mouse drivers so far.
 
+# New and changed
+
+Notable changes for users, see more detailed changelogs at the releases.
+
+Since v1.6.0:
+- Saving settings to non-volatile memory, both for Pico an Linux builds
+
+Since v1.5.0:
+- Fixed a regression in initializing mouse with Windows environments
+
 # Features
 
 Input aggregation from USB data rates to serial, for making the mouse response smooth and accurate.
@@ -28,7 +38,7 @@ Emulated protocols:
 
 All protocols work on DOS and Windows with the appropriate mouse driver or ctmouse.exe available from the FreeDOS project.
 
-Version 1.5.0 fixed an earlier regression in identifying mouse to Windows drivers.
+Since version 1.6.0 you are able to save your settings to non-volatily flash memory or disk so that they get automatically loaded when the adapter starts.
 
 # Controls
 
@@ -47,11 +57,11 @@ One mouse wheel click adds/reduces sensitivity by a factor of 0.2, you can adjus
 
 A serial console feature is provided for more advanced configuration of the features of the mouse adapter, allowing for more than what is practical with just mouse button shortcuts. The serial console uses the same COM port used for acting as a serial adapter and you can toggle between the modes easily. This way the computer can be used to configure the adapter and no additional hardware is required, on Linux you can of course also use direct cli arguments.
 
-Things you can configure (as of 1.3.0):
+Things you can configure (as of 1.6.0):
 - Sensitivity
 - Serial mouse protocol
 - Swap left and right buttons
-- Store settings in non-volatile memory (Not yet implemented)
+- Store settings in non-volatile memory (flash)
 
 Open a serial terminal program (kermit, etc) to the same COM port you connected the mouse to, use the following settings:
 ```
@@ -66,6 +76,20 @@ Press `backspace` (in some terminals `ctrl+backspace`) to bring up the serial co
 For an example you can enter: `3 11<enter>` to change the mouse sensitivity to 11 (1.1 in the above sensitivity scale).
 
 Enter the `exit command` to the serial console after you are done configuring amouse, returning it to adapter mode. If you changed protocols, you may need to re-initialize the OS mouse driver.
+
+### Saving your options
+
+You can save your preferred settings so that they will be automatically loaded when you power on the adapter. These settings will be written into the same non-volatile flash memory on the Pico as the program is written on, just at the end of the flash rather than the beginning where the program is written. Settings currently in use are not written to flash by before you tell the adapter to save them, instead safe defaults will be loaded. However once you have saved your settings, these settings will be used the next time the adapter is powered on
+
+Navigate to `6) Read or write settings (Flash)` from the main menu. You can then:
+
+1) Show help
+2) Load settings from flash
+3) Save settings to flash <--
+
+If you make changes to your settings without saving, these will only remain in the memory until the adapter is power cycled. To update your settings you will need to save the settings to flash again. Using the on-the-fly sensitivity adjustment also changes the in-volatile-memory settings.
+
+With the Linux build the settings will be written to the users home directory at `~/.amouse.conf` (if you run the program as root with sudo, this means `/root/.amouse.conf`), in the same binary format as the Pico build uses.
 
 # Linux version
 
@@ -111,7 +135,9 @@ The following may also provide some pointers for figuring out a `/dev/input/even
 
 If your serial cable/adapter isn't fully pinned (missing a CTS pin), you may use the `-i` (immediate ident) option bypass the automatic handling. In this case you will need to manually time it and launch the mouse driver and amouse at the same time. The timing can be pretty tight and require multiple attempts.
 
-`amouse -h` will also print help and list of flags available. 
+You can use the `-W` option to have the software write your current settings as the default settings when you run the software, the configuration will be written to `~/.amouse.conf` in the same binary format that is used to store the settings in flash for the stand-alone Pico adapter.
+
+`amouse -h` will also print help and list of flags available.
 
 # Raspberry Pico (RP2040) version
 
@@ -159,10 +185,10 @@ Provided that everything is connected up correctly, the adapter will auto-detect
 
 # Planned future features
 
-- Storing settings like sensitivity and used mouse protocol in a non-volatile manner.
-- Mouse Systems protocol.
-- Graceful handling of reconnecting USB devices.
-- DOS-native software for setting options without serial terminal program.
+- [x] Storing settings like sensitivity and used mouse protocol in a non-volatile manner.
+- [ ] Mouse Systems protocol.
+- [ ] Graceful handling of reconnecting USB devices.
+- [ ] DOS-native software for setting options without serial terminal program.
 
 # FAQ
 
