@@ -21,7 +21,7 @@ The adapter has been tested to work with DOS, Windows 3.1, Windows 95 and 98 ser
 Notable changes for users, see more detailed changelogs at the releases.
 
 Since v1.6.0:
-- Console is now accessed with `backspace` rather than `enter` key
+- Console is now accessed with `backspace` rather than `enter` key to avoid Windows ATDT autodetect
 - Saving settings to non-volatile memory, both for Pico an Linux builds
 
 Since v1.5.0:
