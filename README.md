@@ -26,6 +26,7 @@ Since v1.6.0:
 
 Since v1.5.0:
 - Fixed a regression in initializing mouse with Windows environments
+- Changed from FIFO to queue based multi-threading model for much improved reliability in serial transmission
 
 # Features
 
