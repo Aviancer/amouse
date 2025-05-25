@@ -53,6 +53,8 @@ int serial_write(int uart_id, uint8_t *buffer, int size);
 
 int serial_write_terminal(int uart_id, uint8_t *buffer, int size);
 
+bool serial_waitfor_tx(uint32_t max_wait_us);
+
 int serial_read(int uart_id, uint8_t *buffer, int size);
 
 void serial_queue_pop(queue_t *queue, uint8_t *buffer);

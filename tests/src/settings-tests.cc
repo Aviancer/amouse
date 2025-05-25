@@ -9,7 +9,7 @@ extern "C" {
 class SettingsTest : public testing::Test {
   protected:
 
-  uint8_t binary_settings[SETTINGS_SIZE];
+  uint8_t binary_settings[SETTINGS_SIZE] = {0};
 
   // Set-up once per test suite
   static void SetUpTestSuite() {
@@ -46,6 +46,12 @@ class SettingsTest : public testing::Test {
 
 /*** Base tests for encoding/decoding configuration options ***/
 
+// Ensure SETTINGS_SIZE is a multiple of RP2040 Flash Page size
+TEST_F(SettingsTest, SettingsSizeIsRP2040PageMultiple) {
+  EXPECT_TRUE((SETTINGS_SIZE >= 256));
+  EXPECT_TRUE((SETTINGS_SIZE % 256 == 0));
+}
+
 TEST_F(SettingsTest, DecodeFailsCRC) {
 
   binary_settings[3] = 0xAD; // Falsify options, should fail CRC
@@ -75,7 +81,7 @@ TEST_F(SettingsTest, DecodeFailsVersion) {
 TEST_F(SettingsTest, EncodeSucceeds) {
 
   mouse_opts_t mouse_options;
-  uint8_t test_binary_settings[SETTINGS_SIZE];
+  uint8_t test_binary_settings[SETTINGS_SIZE] = {0};
 
   mouse_options.protocol = PROTO_MS2BUTTON;
   mouse_options.sensitivity = 1.0;

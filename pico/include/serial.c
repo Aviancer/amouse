@@ -19,7 +19,7 @@
 
 #include "serial.h"
 #include "../shared/mouse.h"
-#include "../shared/mouse_defs.h" // DEBUG, is this needed?
+#include "include/wrappers.h"
 
 // Map for iterating through each bit (index) for pin (value)  
 // Should be updated to reflect UART_..._PIN values.
@@ -94,6 +94,30 @@ int serial_write_terminal(int uart_id, uint8_t *buffer, int size) {
     bytes++;
   } 
   return bytes;
+}
+
+// Wait for any current serial transmission in the queue to be done
+// Allows defining max_wait_us for timeout
+bool serial_waitfor_tx(uint32_t max_wait_us) {
+  bool time_rollover = false;
+  static uint32_t time_timeout;
+  time_timeout = time_us_32() + max_wait_us; // Can wrap
+
+  // Check if timestamp will roll over before we reach timeout
+  if(time_timeout < time_us_32()) {
+    time_rollover = true;
+  }
+
+  do {
+    a_usleep(10);
+
+    if (time_rollover && (time_us_32() > time_timeout)) { continue; }
+    else { time_rollover = false; }
+
+    if (time_us_32() > time_timeout) { return false; } // Timed out
+  } while(!queue_is_empty(&g_serial_queue));
+
+  return true; // Finished within timeout
 }
 
 // Non-blocking read

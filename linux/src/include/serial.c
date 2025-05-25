@@ -24,8 +24,8 @@
 #include <sys/ioctl.h> // ioctl (serial pins, mouse exclusive access)
 
 #include "serial.h"
+#include "wrappers.h"
 #include "../../../shared/mouse.h"
-
 
 /*** Serial comms ***/
 
@@ -45,6 +45,25 @@ int serial_write_terminal(int fd, uint8_t *buffer, int size) {
     write(fd, &buffer[bytes], 1);
   }  
   return bytes;
+}
+
+// Wait for any current serial transmission to be done
+// Allows defining max_wait_us for timeout
+bool serial_waitfor_tx(uint32_t max_wait_us) {
+
+  struct timespec time_timeout;
+  time_timeout = get_target_time(0, max_wait_us * 1000); // Convert from micro to nanoseconds
+
+  do {
+    a_usleep(10);
+
+    if(timespec_reached(&time_timeout)) {
+      return false; // Timed out
+    }
+
+  } while(1); // TODO: Check queue
+
+  return true; // Finished within timeout
 }
 
 // Non-blocking read

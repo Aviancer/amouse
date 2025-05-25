@@ -84,21 +84,21 @@ const char amouse_bye[] = "Bye!\n    Never too late to dream and frolic - fly!\n
 // We should avoid calloc/malloc on embedded systems.
 uint8_t cmd_buffer[CMD_BUFFER_LEN + 1] = {0};
 
-void console_printvar(int fd, char* prefix, char* variable, char* suffix) {
+static void console_printvar(int fd, char* prefix, char* variable, char* suffix) {
   // Write until \0
   serial_write_terminal(fd, (uint8_t*)prefix, 1024);
   serial_write_terminal(fd, (uint8_t*)variable, 1024);
   serial_write_terminal(fd, (uint8_t*)suffix, 1024);
 }
 
-void console_prompt(int fd) {
+static void console_prompt(int fd) {
   serial_write_terminal(fd,
     (uint8_t*)console_menu[console_context].prompt,
     sizeof(console_menu[console_context].prompt));
   serial_write_terminal(fd, (uint8_t*)"> ", 2); // Add prompt end
 }
 
-void console_help(int fd) {
+static void console_help(int fd) {
   // Add context to which help we are printing
   console_printvar(fd, "[", (char*)console_menu[console_context].prompt, "]\r\n");
   serial_write_terminal(fd,
@@ -108,13 +108,13 @@ void console_help(int fd) {
 }
 
 // Helper to update context and display relevant help
-void console_new_context(int fd, int context) {
+static void console_new_context(int fd, int context) {
   console_context = context;
   console_help(fd);
 }
 
 // Process command buffer for backspace
-void console_backspace(uint8_t cmd_buffer[], char* found_ptr, uint* write_pos) {
+static void console_backspace(uint8_t cmd_buffer[], char* found_ptr, uint* write_pos) {
   uint pread_pos = 0;
   uint pwrite_pos = 0;
 
@@ -138,7 +138,7 @@ void console_backspace(uint8_t cmd_buffer[], char* found_ptr, uint* write_pos) {
   *write_pos = pwrite_pos;
 }
 
-void console_menu_main(int fd, scan_int_t* scan_i) {
+static void console_menu_main(int fd, scan_int_t* scan_i) {
   char itoa_buffer[6] = {0}; // Re-usable buffer for converting ints to char arr
   scan_int_t scan_ii;
 
@@ -181,8 +181,8 @@ void console_menu_main(int fd, scan_int_t* scan_i) {
   }
 }
 
-void console_menu_flash(int fd, scan_int_t* scan_i) {
-  uint8_t binary_settings[SETTINGS_SIZE];
+static void console_menu_flash(int fd, scan_int_t* scan_i) {
+  uint8_t binary_settings[SETTINGS_SIZE] = {0};
 
   switch(scan_i->value) {
     case 1: // Help
@@ -197,8 +197,9 @@ void console_menu_flash(int fd, scan_int_t* scan_i) {
       }
       break;
     case 3: // Write binary settings to storage
-      serial_write_terminal(fd, (uint8_t*)"Writing settings.. ", 19);
       settings_encode(&binary_settings[0], &g_mouse_options);
+      serial_write_terminal(fd, (uint8_t*)"Writing settings.. ", 19);
+      serial_waitfor_tx(NS_FULL_SECOND);
       write_flash_settings(&binary_settings[0], sizeof(binary_settings));
       serial_write_terminal(fd, (uint8_t*)"Done\n", 5);
       break;

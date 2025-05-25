@@ -20,7 +20,9 @@
 #include "mouse.h"
 
 #define SETTINGS_VERSION 0x00
-#define SETTINGS_SIZE 8
+// Defined by size of a flash page on RP2040, effectively minimum writing size
+// This has to be a multiple of 256 bytes (spi_flash.c)
+#define SETTINGS_SIZE 256
 
 void settings_encode(uint8_t *binary_settings, mouse_opts_t *options);
 bool settings_decode(uint8_t *binary_settings, mouse_opts_t *options);

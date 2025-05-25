@@ -35,6 +35,9 @@
      *    V
      *    Mo[version][options]uS[crc8]
      *
+     *  Buffer size holding the settings must be a multiple of 256 to match RP2040 
+     *  flash page size, not to read past buffer on write.
+     *     
      *  Version: 1 byte, 0x00-0xFF
      *
      *  Bits
@@ -52,7 +55,7 @@
     */
 
 
-bool assert_byte(uint8_t byte1, uint8_t byte2) {
+static bool assert_byte(uint8_t byte1, uint8_t byte2) {
     return(byte1 == byte2);
 }
 

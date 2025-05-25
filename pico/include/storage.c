@@ -41,7 +41,8 @@ uint8_t *flash_target_contents = (uint8_t *) (XIP_BASE + FLASH_TARGET);
 // This function will be called when it's safe to call flash_range_erase
 static void call_flash_range_erase(void *param) {
    uint32_t offset = (uint32_t)param;
-   flash_range_erase(offset, FLASH_SECTOR_SIZE);
+   // Default to 1 sector, needs update if we ever write more than 4096 bytes
+   flash_range_erase(offset, FLASH_SECTOR_SIZE); 
 }
 
 // This function will be called when it's safe to call flash_range_program
@@ -66,7 +67,13 @@ uint8_t* ptr_flash_settings() {
 void write_flash_settings(uint8_t *buffer, size_t size) {
    erase_flash_settings(); // Erase is implicit in writing
 
-   uintptr_t params[] = { FLASH_TARGET, (uintptr_t)buffer, size };
+   // Figure out how many pages we are writing, write_size must be multiple of page size.
+   size_t write_size;
+   uint write_modulo = size % FLASH_PAGE_SIZE;
+   if(write_modulo > 0) { write_size = (size / FLASH_PAGE_SIZE + 1) * FLASH_PAGE_SIZE; }
+   else { write_size = (size / FLASH_PAGE_SIZE) * FLASH_PAGE_SIZE; }
+
+   uintptr_t params[] = { FLASH_TARGET, (uintptr_t)buffer, write_size };
    // timeout = UINT32_MAX
    int rc = flash_safe_execute(call_flash_range_program, params, UINT32_MAX);
    hard_assert(rc == PICO_OK);
