@@ -131,7 +131,7 @@ void core1_tightloop() {
 
   uint8_t serial_data;
   while(1) {
-    //g_serial_queue_pop(&g_serial_queue, &serial_data); // TODO: Test if returns correct data now
+    //serial_queue_pop(&g_serial_queue, &serial_data); // TODO: Test if returns correct data now
     queue_remove_blocking(&g_serial_queue, &serial_data);
     uart_putc_raw(uart0, serial_data); // TODO: Make UART configurable.
   }

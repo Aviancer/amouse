@@ -78,7 +78,7 @@ const char amouse_bye[] = "Bye!\n    Never too late to dream and frolic - fly!\n
 
 /*** Global data / BSS (Avoid stack) ***/ 
 
-// TODO: Any?
+uint8_t binary_settings[SETTINGS_SIZE] = {0}; // Better to allocate once here
 
 
 // We should avoid calloc/malloc on embedded systems.
@@ -182,7 +182,6 @@ static void console_menu_main(int fd, scan_int_t* scan_i) {
 }
 
 static void console_menu_flash(int fd, scan_int_t* scan_i) {
-  uint8_t binary_settings[SETTINGS_SIZE] = {0};
 
   switch(scan_i->value) {
     case 1: // Help
