@@ -81,7 +81,7 @@ Enter the `exit command` to the serial console after you are done configuring am
 
 ### Saving your options
 
-You can save your preferred settings so that they will be automatically loaded when you power on the adapter. These settings will be written into the same non-volatile flash memory on the Pico as the program is written on, just at the end of the flash rather than the beginning where the program is written. Settings currently in use are not written to flash by before you tell the adapter to save them, instead safe defaults will be loaded. However once you have saved your settings, these settings will be used the next time the adapter is powered on
+You can save your preferred settings so that they will be automatically loaded when you power on the adapter. These settings will be written to the same non-volatile flash memory that also stores the firmware. The currently selected settings are persisted to flash once you tell the adapter to save them, before that safe defaults will be loaded on boot. However once you have saved your settings, these settings will be automatically used the next time the adapter is powered on.
 
 Navigate to `6) Read or write settings (Flash)` from the main menu. You can then:
 
@@ -89,7 +89,7 @@ Navigate to `6) Read or write settings (Flash)` from the main menu. You can then
 2) Load settings from flash
 3) Save settings to flash <--
 
-If you make changes to your settings without saving, these will only remain in the memory until the adapter is power cycled. To update your settings you will need to save the settings to flash again. Using the on-the-fly sensitivity adjustment also changes the in-volatile-memory settings.
+If you make changes to your settings without saving, these will only remain in the memory until the adapter is power cycled. To update your settings you will need to save the settings to flash again. Using the on-the-fly sensitivity adjustment also changes the volatile in-memory settings.
 
 With the Linux build the settings will be written to the users home directory at `~/.amouse.conf` (if you run the program as root with sudo, this means `/root/.amouse.conf`), in the same binary format as the Pico build uses.
 
@@ -137,7 +137,7 @@ The following may also provide some pointers for figuring out a `/dev/input/even
 
 If your serial cable/adapter isn't fully pinned (missing a CTS pin), you may use the `-i` (immediate ident) option bypass the automatic handling. In this case you will need to manually time it and launch the mouse driver and amouse at the same time. The timing can be pretty tight and require multiple attempts.
 
-You can use the `-W` option to have the software write your current settings as the default settings when you run the software, the configuration will be written to `~/.amouse.conf` in the same binary format that is used to store the settings in flash for the stand-alone Pico adapter.
+You can use the `-W` option to have the software write your current mouse options as the default settings when you run the software, the configuration will be written to `~/.amouse.conf` in the same binary format that is used to store the settings in flash for the stand-alone Pico adapter. As such it does not save any Linux specific settings like device paths.
 
 `amouse -h` will also print help and list of flags available.
 
