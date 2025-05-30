@@ -78,13 +78,12 @@ const char amouse_bye[] = "Bye!\n    Never too late to dream and frolic - fly!\n
 
 /*** Global data / BSS (Avoid stack) ***/ 
 
-uint8_t binary_settings[SETTINGS_SIZE] = {0}; // Better to allocate once here
-
-
 // We should avoid calloc/malloc on embedded systems.
+uint8_t binary_settings[SETTINGS_SIZE] = {0}; // Better to allocate once here
 uint8_t cmd_buffer[CMD_BUFFER_LEN + 1] = {0};
 
-static void console_printvar(int fd, char* prefix, char* variable, char* suffix) {
+
+static void console_printvar(int fd, const char* prefix, const char* variable, const char* suffix) {
   // Write until \0
   serial_write_terminal(fd, (uint8_t*)prefix, 1024);
   serial_write_terminal(fd, (uint8_t*)variable, 1024);

@@ -43,6 +43,7 @@ enum MOUSE_PROTOCOLS {
 #define U_SERIALDELAY_1B  7500      // 1 byte
 #define U_SERIALDELAY_3B  22700     // 3 bytes (microseconds)
 #define U_SERIALDELAY_4B  30000     // 4 bytes (microseconds)
+#define U_SERIALDELAY_5B  37500     // 5 bytes (microseconds)
 // 1200 baud (bits/s) is 133.333333333... bytes/s
 // 44.44.. updates per second with 3 bytes.
 // 33.25.. updates per second with 4 bytes.
@@ -51,6 +52,7 @@ enum MOUSE_PROTOCOLS {
 #define NS_SERIALDELAY_1B   7500000   // 1 byte
 #define NS_SERIALDELAY_3B   22700000  // 3 bytes
 #define NS_SERIALDELAY_4B   30000000  // 4 bytes
+#define NS_SERIALDELAY_5B   37500000  // 5 bytes
 
 // Struct for storing information about accumulated mouse state
 typedef struct mouse_state {

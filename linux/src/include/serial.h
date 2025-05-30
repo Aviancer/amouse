@@ -19,9 +19,9 @@
 #include <termios.h> // POSIX terminal control defs
 #include <stdbool.h>
 
-int serial_write(int fd, uint8_t *buffer, int size);
+int serial_write(int fd, const uint8_t *buffer, int size);
 
-int serial_write_terminal(int fd, uint8_t *buffer, int size);
+int serial_write_terminal(int fd, const uint8_t *buffer, int size);
 
 bool serial_waitfor_tx(uint32_t max_wait_us);
 

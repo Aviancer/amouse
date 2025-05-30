@@ -67,7 +67,7 @@ void mouse_serial_init(int uart_id) {
   }
 }
 
-int serial_write(int uart_id, uint8_t *buffer, int size) {
+int serial_write(int uart_id, const uint8_t *buffer, int size) {
   // For now uart is what gets set in Core 1 loop.
   int bytes=0;
   for(; bytes < size; bytes++) {
@@ -78,7 +78,7 @@ int serial_write(int uart_id, uint8_t *buffer, int size) {
 }
 
 /* Write to serial out with convert terminal characters */
-int serial_write_terminal(int uart_id, uint8_t *buffer, int size) { 
+int serial_write_terminal(int uart_id, const uint8_t *buffer, int size) {
   // For now uart is what gets set in Core 1 loop.
   //uart_inst_t* uart = get_uart(uart_id);
   int bytes=0;

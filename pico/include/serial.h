@@ -49,9 +49,9 @@ uart_inst_t* get_uart(int uart_id);
 
 void mouse_serial_init(int uart_id);
 
-int serial_write(int uart_id, uint8_t *buffer, int size);
+int serial_write(int uart_id, const uint8_t *buffer, int size);
 
-int serial_write_terminal(int uart_id, uint8_t *buffer, int size);
+int serial_write_terminal(int uart_id, const uint8_t *buffer, int size);
 
 bool serial_waitfor_tx(uint32_t max_wait_us);
 

@@ -26,10 +26,10 @@
 
 extern mouse_opts_t g_mouse_options; // Global options
 
-extern mouse_proto_t g_mouse_protocol[3]; // Global options
+extern const mouse_proto_t g_mouse_protocol[3]; // Global options
 extern uint g_mouse_protocol_num;
 
-extern uint8_t g_pkt_intellimouse_intro[];
+extern const uint8_t g_pkt_intellimouse_intro[];
 extern int g_pkt_intellimouse_intro_len;
 
 /* Functions */

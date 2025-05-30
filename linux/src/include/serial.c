@@ -29,12 +29,12 @@
 
 /*** Serial comms ***/
 
-int serial_write(int fd, uint8_t *buffer, int size) { 
+int serial_write(int fd, const uint8_t *buffer, int size) {
   return write(fd, buffer, size);
 }
 
 /* Write to serial out with enforced order, convert terminal characters */
-int serial_write_terminal(int fd, uint8_t *buffer, int size) { 
+int serial_write_terminal(int fd, const uint8_t *buffer, int size) {
   int bytes=0;
   for(; bytes < size; bytes++) {
     if(buffer[bytes] == '\0') { return bytes; }
